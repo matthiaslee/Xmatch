@@ -1,0 +1,19 @@
+I tried to collect my thoughts on the project and compile a short list of things to do to make the CuXmatch
+code better:
+
+ o Seek to end-of-file and get sizes in bytes before reading file
+
+ o Check if datasets fit in host and/or device memory:
+   - If not, process them in chunks!
+   - Perhaps merge sort files that are bigger then RAM?
+
+ o Open output file and append the results from the zone-zone xmatching
+
+ o Final step of dumping results is slow because of memory lookups:
+   - Write and test xmatch kernel that saves the IDs instead of the
+        indices of the found matches
+    (The dump of a buffer would be much faster than fetching IDs...)
+
+ o RA wraparound when everything else works
+
+Have any questions about these bullets?
