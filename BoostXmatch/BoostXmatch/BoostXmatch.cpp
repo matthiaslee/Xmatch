@@ -30,11 +30,12 @@ THE SOFTWARE.
 #include <iostream>
 #include <string>
 #include <list>
-#include <memory> // shared_ptr in TR1/C++0x
+//#include <memory> // shared_ptr in TR1/C++0x
 
 #include <math.h>
 
 #include <boost/thread.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/date_time.hpp>  
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -136,7 +137,7 @@ namespace xmatch
 			return out;
 		}
 	};
-	typedef std::shared_ptr<Object> ObjectPtr;
+	typedef boost::shared_ptr<Object> ObjectPtr;
 	typedef std::vector<ObjectPtr> ObjectVec;
 
 	/*
@@ -207,7 +208,7 @@ namespace xmatch
 			return o;
 		}
 	};
-	typedef std::shared_ptr<Segment> SegmentPtr;
+	typedef boost::shared_ptr<Segment> SegmentPtr;
 	typedef std::vector<SegmentPtr> SegmentVec;
 
 	typedef enum { pending, running, finished } JobStatus;
@@ -234,7 +235,7 @@ namespace xmatch
 			return o;
 		}
 	};
-	typedef std::shared_ptr<Job> JobPtr;
+	typedef boost::shared_ptr<Job> JobPtr;
 	typedef std::vector<JobPtr> JobVec;
 
 
@@ -291,7 +292,7 @@ namespace xmatch
 			job->status = status;
 		}
 	};
-	typedef std::shared_ptr<JobManager> JobManagerPtr;
+	typedef boost::shared_ptr<JobManager> JobManagerPtr;
 
 
 	class Worker
