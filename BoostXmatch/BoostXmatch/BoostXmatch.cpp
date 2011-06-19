@@ -1,3 +1,9 @@
+/* Current revision:
+ *   ID:          $Id:$
+ *   Revision:    $Revision: $
+ *   Date:        $Date: $
+ */
+
 #include <iostream>
 #include <string>
 #include <list>
@@ -297,11 +303,14 @@ namespace xmatch
 		// parse command line
 		po::options_description options("Options");
 		po::variables_map vm;
-		int num_threads;
+		std::string ofile;
+		std::vector<std::string> ifiles;
 		double zh_arcsec, sr_arcsec;
+		int num_threads;
 		try
 		{
 			options.add_options()
+				("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
 				("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 				("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
 				("nthreads,n", po::value<int>(&num_threads)->default_value(1), "number of threads")
@@ -311,7 +320,7 @@ namespace xmatch
 			// hidden 
 			po::options_description opt_hidden("Hidden options");        
 			opt_hidden.add_options()
-				("input-file", po::value< std::vector<std::string> >(), "input file")
+				("input", po::value< std::vector<std::string> >(&ifiles), "input file")
 			;        
 			// all options
 			po::options_description opt_cmd("Command options");
@@ -319,7 +328,7 @@ namespace xmatch
 
 			// use input files without the switch
 			po::positional_options_description p;
-			p.add("input-file", -1);
+			p.add("input", -1);
 
 			// parse...
 			po::store(po::command_line_parser(argc,argv).options(opt_cmd).positional(p).run(),vm);
@@ -327,22 +336,29 @@ namespace xmatch
 		}
 		catch (std::exception& exc)
 		{
-            std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl;
-            std::cout << options;
-			std::cout << "Error: " << std::endl;
-			std::cout << "   " << exc.what() << std::endl;
+            std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+			std::cout << "Error: " << std::endl << "   " << exc.what();
             return 1;
 		}
-		if (vm.count("help") || !vm.count("input-file")) 
+		if (vm.count("help")) 
 		{
-            std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl;
-            std::cout << options;
+            std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+			std::cout << "Subversion: " << std::endl << "   $Revision: $";
             return 0;
         }
+		if (!vm.count("input"))
+		{
+			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+			std::cout << "Error: " << std::endl << "   No input file(s)";
+            return 2;
+		}
+		// default zone height is radius
 		if (zh_arcsec == 0) zh_arcsec = sr_arcsec;
 
-		std::cout << "Input file(s): " << vm["input-file"].as< std::vector<std::string> >() << std::endl;
-        std::cout << "Search radius: " << sr_arcsec << std::endl;                
+		//std::cout << "Input file(s): " << vm["input-file"].as< std::vector<std::string> >() << std::endl;
+		std::cout << "Input file(s): " << ifiles << std::endl;
+		if (!ofile.empty()) std::cout << "Output file: " << ofile << std::endl;
+		std::cout << "Search radius: " << sr_arcsec << std::endl;                
         std::cout << "Zone height: " << zh_arcsec << std::endl;                
 		std::cout << "# of threads: " << num_threads << std::endl;                
         if (vm.count("verbose")) std::cout << "Verbosity: " << vm["verbose"].as<int>() << std::endl;
