@@ -1,6 +1,6 @@
 /* Current revision:
- *   ID:          $Id:$
- *   Revision:    $Revision: $
+ *   ID:          $Id$
+ *   Revision:    $Revision$
  *   Date:        $Date: $
  */
 
@@ -343,7 +343,7 @@ namespace xmatch
 		if (vm.count("help")) 
 		{
             std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Subversion: " << std::endl << "   $Revision: $";
+			std::cout << "Subversion: " << std::endl << "   $Revision$";
             return 0;
         }
 		if (!vm.count("input"))
