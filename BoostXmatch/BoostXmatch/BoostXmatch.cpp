@@ -1,5 +1,4 @@
 /*
- * Current revision:
  *   ID:          $Id$
  *   Revision:    $Rev$
  */
@@ -64,10 +63,11 @@ namespace xmatch
 	template<class T>
 	std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
 	{
-		copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout, " ")); 
+		copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout," ")); 
 		return os;
 	};
 
+	/*
 	// Calls the provided work function and returns the number of milliseconds 
 	// that it takes to call that function.
 	template <class Function>
@@ -77,6 +77,7 @@ namespace xmatch
 	   f();
 	   return GetTickCount() - begin;
 	}
+	*/
 
 	class Random
 	{
@@ -109,8 +110,6 @@ namespace xmatch
 	// global for testing
 	Random gRand(42u);
 
-	
-
 
 	class Object
 	{
@@ -138,11 +137,11 @@ namespace xmatch
 		}
 	};
 	typedef std::shared_ptr<Object> ObjectPtr;
-	typedef std::vector<ObjectPtr> ObjectVector;
+	typedef std::vector<ObjectPtr> ObjectVec;
 
 	/*
 	// read binary files
-	ObjectVector LoadBin(std::vector<Object>& obj, const fs::path& path)
+	ObjectVec LoadBin(std::vector<Object>& obj, const fs::path& path)
 	{
 		fs::ifstream myfile(path, std::ios::in | std::ios::binary);
 		if (myfile.is_open()) 
@@ -209,7 +208,7 @@ namespace xmatch
 		}
 	};
 	typedef std::shared_ptr<Segment> SegmentPtr;
-	typedef std::vector<SegmentPtr> SegmentVector;
+	typedef std::vector<SegmentPtr> SegmentVec;
 
 	typedef enum { pending, running, finished } JobStatus;
 
@@ -236,20 +235,20 @@ namespace xmatch
 		}
 	};
 	typedef std::shared_ptr<Job> JobPtr;
-	typedef std::vector<JobPtr> JobVector;
+	typedef std::vector<JobPtr> JobVec;
 
 
 	class JobManager
 	{
 	private:
 		boost::mutex mtx;
-		JobVector jobs;
+		JobVec jobs;
 
 	public:
-		JobManager(const SegmentVector& segA, const SegmentVector& segB) 
+		JobManager(const SegmentVec& segA, const SegmentVec& segB) 
 		{
-			for (SegmentVector::size_type iA=0; iA<segA.size(); iA++)
-			for (SegmentVector::size_type iB=0; iB<segB.size(); iB++)
+			for (SegmentVec::size_type iA=0; iA<segA.size(); iA++)
+			for (SegmentVec::size_type iB=0; iB<segB.size(); iB++)
 			{
 				JobPtr job(new Job(segA[iA],segB[iB]));
 				jobs.push_back(job);
@@ -261,7 +260,7 @@ namespace xmatch
 		{
 			boost::mutex::scoped_lock lock(mtx);
 			JobPtr nextjob((Job*)NULL);
-			for (JobVector::size_type i=0; i<jobs.size(); i++)
+			for (JobVec::size_type i=0; i<jobs.size(); i++)
 			{
 				JobPtr job = jobs[i];
 				if (job->status == pending)
@@ -363,11 +362,11 @@ namespace xmatch
 
 	/*
 	Outline:
-		1) Main thread: Load all segments from file A 
+		1) Main thread: Load all segments from smaller file 
 		2) Pre-process: Sort all segments and save in host mem
-		3) Main thread: Load segment for all GPUs from file B
-		4) Pre-process: Sort segments
-		5) Worker thrd: Loop on A from own queue, and try to steal jobs if done
+		3) Main thread: Load enough segments for GPUs from the larger file
+		4) Pre-process: Sort them
+		5) Worker thrd: Do the job(s)
 	*/
 	int _main(int argc, char* argv[])
 	{
@@ -442,23 +441,24 @@ namespace xmatch
 			std::cout << "Verbosity: " << vm["verbose"].as<int>() << std::endl;
 		}
 
-
-		fs::path in0(ifiles[0]);
-		if(fs::exists(in0) && fs::is_regular_file(in0))
+		//// file_size and i/o start here... need objects in segments now...
 		{
-			std::cout << "0 - size: " << fs::file_size(in0) << std::endl;
+			fs::path in0(ifiles[0]);
+			if(fs::exists(in0) && fs::is_regular_file(in0))
+			{
+				std::cout << "0 - size: " << fs::file_size(in0) << std::endl;
+			}
+			else
+			{
+				std::cout << "0 - file not found" << std::endl;
+			}
+			fs::ifstream is0(in0, std::ios::in | std::ios::binary);
 		}
-		else
-		{
-			std::cout << "0 - file not found" << std::endl;
-		}
-
-		fs::ifstream is0(in0, std::ios::in | std::ios::binary);
 		
-		return 0;
+		// return 0;
 
 		// load segments from file A
-		SegmentVector segmentsRam;
+		SegmentVec segmentsRam;
 		for (size_t i=0; i<5; i++) 
 		{
 			Segment *s = new Segment(i, true); // sorted for now
@@ -476,9 +476,9 @@ namespace xmatch
 			//std::cout << "FILE" << std::endl;
 
 			// load new segments from file B
-			SegmentVector segmentsFile;
+			SegmentVec segmentsFile;
 			size_t num_seg = num_threads;
-			for (SegmentVector::size_type i=0; i<num_seg; i++)
+			for (SegmentVec::size_type i=0; i<num_seg; i++)
 			{
 				Segment *s = new Segment(i+loop*num_seg,true); // sorted for now
 				SegmentPtr sp(s); 
