@@ -1,12 +1,10 @@
-#	PACKAGE:	Xmatch
+# PACKAGE:	Xmatch
 #
-# os: linux
-# --- Macros -----------------------------------------------------------------
+# OS: Linux
 
-#CCXX	=	g++ -O2
-CCXX	=	g++ -g
+#CC	=	g++ -O2
+CC	=	g++ -g
 LD	=	g++ -static
-ARFLAGS	= 	
 CP	=       cp
 RM	=       rm -f
 
@@ -32,6 +30,10 @@ EXE =	BoostXmatch.x
 # Rules for building each executable.
 all :	${EXE}
 
+# Test
+test : ${EXE}
+	./${EXE} ../../Data/test.idradec ../../Data/test.idradec -v
+
 # Build and install the executables.
 apps :	${EXE}
 	- ${CP} ${EXE} ../bin
@@ -56,17 +58,12 @@ veryclean :	clean
 .SUFFIXES:
 .SUFFIXES: .x .o .cpp
 
-# Compiling C++ code.  The command lines are so long as to be useless.
+# Compiling C++ code
 
 .cpp.o:
-#	@ echo compiling $<
-#	@ ${CCXX} -c ${CCFLAGS} $<
-	 ${CCXX} -c $< ${CCFLAGS}
+	 ${CC} -c $< ${CCFLAGS}
 
 .o.x: 
-# ${LIBRARY}
-#	@ echo linking " " $@
-#	@ ${LD} -o $@ ${CCFLAGS} $< ${LDLIBS}
 	 ${LD} -o $@ $< ${LDLIBS}
 
 
