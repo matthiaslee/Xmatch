@@ -416,10 +416,10 @@ namespace xmatch
 			std::cout << "Subversion: $Rev$";
             return 0;
         }
-		if (!vm.count("input"))
+		if (!vm.count("input") || ifiles.size() != 2)
 		{
 			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   No input file(s)";
+			std::cout << "Error: " << std::endl << "   Input 2 files!";
             return 2;
 		}
 		// default zone height is radius
@@ -442,20 +442,19 @@ namespace xmatch
 		}
 
 		//// file_size and i/o start here... need objects in segments now...
-		{
-			fs::path in0(ifiles[0]);
-			if(fs::exists(in0) && fs::is_regular_file(in0))
-			{
-				std::cout << "0 - size: " << fs::file_size(in0) << std::endl;
-			}
-			else
-			{
-				std::cout << "0 - file not found" << std::endl;
-			}
-			fs::ifstream is0(in0, std::ios::in | std::ios::binary);
-		}
+		std::vector<uintmax_t> isizes;
 		
-		// return 0;
+		try
+		{
+		}
+		catch (std::exception& exc)
+		{
+			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+			std::cout << "Error: " << std::endl << "   File not found! ";
+		}
+
+		//fs::ifstream is0(in0, std::ios::in | std::ios::binary);
+		
 
 		// load segments from file A
 		SegmentVec segmentsRam;
