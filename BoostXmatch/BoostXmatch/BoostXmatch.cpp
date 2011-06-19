@@ -1,18 +1,44 @@
-/* Current revision:
+/*
+ * Current revision:
  *   ID:          $Id$
- *   Revision:    $Revision$
- *   Date:        $Date: $
+ *   Revision:    $Rev$
  */
+
+/*
+Copyright (c) 2011 Tamas Budavari <budavari.at.deleteme.jhu.edu>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+/* MIT license http://www.opensource.org/licenses/mit-license.php */
+
 
 #include <iostream>
 #include <string>
 #include <list>
 #include <memory> // shared_ptr in TR1/C++0x
 
+#include <math.h>
+
 #include <boost/thread.hpp>
 #include <boost/date_time.hpp>  
 #include <boost/filesystem.hpp>
-//#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
 
 #include <boost/random/linear_congruential.hpp>
@@ -26,6 +52,9 @@ typedef boost::minstd_rand base_generator_type;
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
+
+#define RAD2DEG 57.295779513082323
+#define THREADS_PER_BLOCK 512
 
 namespace xmatch
 {
@@ -79,6 +108,48 @@ namespace xmatch
 	};
 	// global for testing
 	Random gRand(42u);
+
+	
+
+
+	class Object
+	{
+	public:
+		int64_t id;
+		double ra, dec;
+
+		//__host__ __device__	
+		Object() : id(-1), ra(0), dec(0) {}
+
+		//__host__ __device__
+		Object(int64_t objid, double ra_deg, double dec_deg)
+			: id(objid), ra(ra_deg), dec(dec_deg) {}
+
+		//__host__ __device__
+		int zoneid(double height) const
+		{
+			return 0; // (int) rint( (dec+90)/height );
+		}
+
+		friend std::ostream& operator<< (std::ostream& out, const Object& o) 
+		{
+			out << o.id << " " << o.ra << " " << o.dec;
+			return out;
+		}
+	};
+	typedef std::shared_ptr<Object> ObjectPtr;
+	typedef std::vector<ObjectPtr> ObjectVector;
+
+	/*
+	// read binary files
+	ObjectVector LoadBin(std::vector<Object>& obj, const fs::path& path)
+	{
+		fs::ifstream myfile(path, std::ios::in | std::ios::binary);
+		if (myfile.is_open()) 
+			myfile.read( (char*)o, obj.size() * sizeof(object) );
+		myfile.close();    
+	}
+	*/
 
 	class Segment
 	{
@@ -137,7 +208,7 @@ namespace xmatch
 			return o;
 		}
 	};
-	typedef boost::shared_ptr<Segment> SegmentPtr;
+	typedef std::shared_ptr<Segment> SegmentPtr;
 	typedef std::vector<SegmentPtr> SegmentVector;
 
 	typedef enum { pending, running, finished } JobStatus;
@@ -164,7 +235,7 @@ namespace xmatch
 			return o;
 		}
 	};
-	typedef boost::shared_ptr<Job> JobPtr;
+	typedef std::shared_ptr<Job> JobPtr;
 	typedef std::vector<JobPtr> JobVector;
 
 
@@ -221,7 +292,7 @@ namespace xmatch
 			job->status = status;
 		}
 	};
-	typedef boost::shared_ptr<JobManager> JobManagerPtr;
+	typedef std::shared_ptr<JobManager> JobManagerPtr;
 
 
 	class Worker
@@ -343,7 +414,7 @@ namespace xmatch
 		if (vm.count("help")) 
 		{
             std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Subversion: " << std::endl << "   $Rev$";
+			std::cout << "Subversion: $Rev$";
             return 0;
         }
 		if (!vm.count("input"))
@@ -355,14 +426,36 @@ namespace xmatch
 		// default zone height is radius
 		if (zh_arcsec == 0) zh_arcsec = sr_arcsec;
 
+		int verbose = 0;
+		if (vm.count("verbose")) verbose = vm["verbose"].as<int>();
+
+		fs::path opath(ofile);
+
 		//std::cout << "Input file(s): " << vm["input-file"].as< std::vector<std::string> >() << std::endl;
-		std::cout << "Input file(s): " << ifiles << std::endl;
-		if (!ofile.empty()) std::cout << "Output file: " << ofile << std::endl;
-		std::cout << "Search radius: " << sr_arcsec << std::endl;                
-        std::cout << "Zone height: " << zh_arcsec << std::endl;                
-		std::cout << "# of threads: " << num_threads << std::endl;                
-        if (vm.count("verbose")) std::cout << "Verbosity: " << vm["verbose"].as<int>() << std::endl;
-    
+		if (verbose)
+		{
+			std::cout << "Input file(s): " << ifiles << std::endl;
+			if (!ofile.empty()) std::cout << "Output file: " << opath << std::endl;
+			std::cout << "Search radius: " << sr_arcsec << std::endl;                
+			std::cout << "Zone height: " << zh_arcsec << std::endl;                
+			std::cout << "# of threads: " << num_threads << std::endl;                
+			std::cout << "Verbosity: " << vm["verbose"].as<int>() << std::endl;
+		}
+
+
+		fs::path in0(ifiles[0]);
+		if(fs::exists(in0) && fs::is_regular_file(in0))
+		{
+			std::cout << "0 - size: " << fs::file_size(in0) << std::endl;
+		}
+		else
+		{
+			std::cout << "0 - file not found" << std::endl;
+		}
+
+		fs::ifstream is0(in0, std::ios::in | std::ios::binary);
+		
+		return 0;
 
 		// load segments from file A
 		SegmentVector segmentsRam;
