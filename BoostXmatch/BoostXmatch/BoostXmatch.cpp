@@ -343,7 +343,7 @@ namespace xmatch
 		if (vm.count("help")) 
 		{
             std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Subversion: " << std::endl << "   $Revision$";
+			std::cout << "Subversion: " << std::endl << "   $Rev$";
             return 0;
         }
 		if (!vm.count("input"))
