@@ -408,19 +408,19 @@ namespace xmatch
 		catch (std::exception& exc)
 		{
             std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   " << exc.what();
+			std::cout << "Error: " << std::endl << "   " << exc.what() << std::endl;
             return 1;
 		}
 		if (vm.count("help")) 
 		{
             std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Subversion: $Rev$";
+			std::cout << "Subversion: $Rev$" << std::endl ;
             return 0;
         }
 		if (!vm.count("input") || ifiles.size() != 2)
 		{
 			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   Input 2 files!";
+			std::cout << "Error: " << std::endl << "   Input 2 files!" << std::endl ;
             return 2;
 		}
 		// default zone height is radius
@@ -451,7 +451,7 @@ namespace xmatch
 		catch (std::exception& exc)
 		{
 			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   File not found! ";
+			std::cout << "Error: " << std::endl << "   File not found! " << std::endl ;
 		}
 
 		//fs::ifstream is0(in0, std::ios::in | std::ios::binary);
