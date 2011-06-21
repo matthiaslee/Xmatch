@@ -30,13 +30,11 @@ THE SOFTWARE.
 #include <iostream>
 #include <string>
 #include <list>
-//#include <memory> // shared_ptr in TR1/C++0x
 
 #include <math.h>
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/shared_array.hpp>
 #include <boost/date_time.hpp>  
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -113,7 +111,7 @@ namespace xmatch
 	Random gRand(42u);
 
 
-	class Object
+	struct Object
 	{
 	public:
 		int64_t id;
@@ -138,7 +136,6 @@ namespace xmatch
 		}
 	};
 	typedef boost::shared_ptr<Object> ObjectPtr;
-	typedef boost::shared_array<Object> ObjectArr;
 	typedef std::vector<ObjectPtr> ObjectVec;
 
 	/*
@@ -150,6 +147,7 @@ namespace xmatch
 			myfile.read( (char*)o, obj.size() * sizeof(object) );
 		myfile.close();    
 	}
+
 	*/
 	/* Tamastol
 		std::ifstream file("tmp.dat");
@@ -164,10 +162,18 @@ namespace xmatch
 	public:
 		int id;
 		bool sorted;
-		ObjectArr obj;
+		std::vector<Object> obj;
 
-		Segment(int id, ObjectArr obj, bool sorted) : id(id), obj(obj), sorted(sorted)
+		Segment(int id, int num) : id(id), sorted(false)
 		{
+			obj.reserve(num);
+			//obj[0].id = 10;
+			//obj[0].ra = 99;
+		}
+
+		~Segment()
+		{
+			obj.clear();
 		}
 
 		/*
@@ -183,6 +189,7 @@ namespace xmatch
 			std::cout << "Segment " << *this << " " << msg << std::endl;
 		}
 		*/
+
 		std::string ToString(const std::string &sep) const
 		{
 			std::stringstream ss;
@@ -364,20 +371,21 @@ namespace xmatch
 	int _main(int argc, char* argv[])
 	{
 		// parse command line
-		po::options_description options("Options");
-		po::variables_map vm;
-		std::string ofile;
 		std::vector<std::string> ifiles;
+		std::string ofile;
 		double zh_arcsec, sr_arcsec;
 		int num_threads, num_obj;
+
+		po::options_description options("Options");
+		po::variables_map vm;
 		try
 		{
 			options.add_options()
 				("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
 				("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 				("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
-				("nthreads,n", po::value<int>(&num_threads)->default_value(1), "number of threads")
-				("chunk,c", po::value<int>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
+				("threads,t", po::value<int>(&num_threads)->default_value(1), "number of threads")
+				("nobject,n", po::value<int>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
 				("verbose,v", po::value<int>()->implicit_value(1), "enable verbosity (optionally specify level)")
 				("help,h", "print help message")
 			;
@@ -414,6 +422,7 @@ namespace xmatch
 		{
 			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
 			std::cout << "Error: " << std::endl << "   Input 2 files!" << std::endl ;
+			std::cout << "Got this: " << std::endl << ifiles << std::endl;
             return 2;
 		}
 		// default zone height is radius
@@ -431,8 +440,9 @@ namespace xmatch
 			if (!ofile.empty()) std::cout << " -1- Output file: " << opath << std::endl;
 			std::cout << " -1- Search radius: " << sr_arcsec << std::endl;                
 			std::cout << " -1- Zone height: " << zh_arcsec << std::endl;                
-			std::cout << " -1- # of threads: " << num_threads << std::endl;                
 			std::cout << " -1- Verbosity: " << vm["verbose"].as<int>() << std::endl;
+			std::cout << " -1- # of threads: " << num_threads << std::endl;                
+			std::cout << " -1- # of obj/seg: " << num_obj << std::endl;                
 		}
 
 		// input files
@@ -471,17 +481,18 @@ namespace xmatch
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(inApath, std::ios::in | std::ios::binary);
-			uintmax_t numSeg = inAlen / num_obj + 1;
-			for (int i=0; i<numSeg; i++) 
+			int id = 0;
+			int len = inAlen;
+			while (len > 0)
 			{
-				int num = 88;
-				Object* _obj = new Object[num];
-				file.read((char*)_obj,num*sizeof(Object));
+				int num = (len > num_obj) ? num_obj : len;
+				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
+				len -= num;
 
-				ObjectArr obj(_obj);
-				Segment *s = new Segment(i, obj, true); 
-				SegmentPtr sp(s); 
-				segmentsRam.push_back(sp);
+				Segment *s = new Segment(id++, num); 
+				// std::cout << ":: " << s->obj[0] << std::endl;
+				file.read((char*)(&(s->obj[0])),num*sizeof(Object));
+				segmentsRam.push_back(SegmentPtr(s));
 			}	
 		}
 		// sort segments of A in parallel [tbd]
