@@ -36,6 +36,7 @@ THE SOFTWARE.
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/shared_array.hpp>
 #include <boost/date_time.hpp>  
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -122,8 +123,7 @@ namespace xmatch
 		Object() : id(-1), ra(0), dec(0) {}
 
 		//__host__ __device__
-		Object(int64_t objid, double ra_deg, double dec_deg)
-			: id(objid), ra(ra_deg), dec(dec_deg) {}
+		Object(int64_t id, double ra, double dec) : id(id), ra(ra), dec(dec) {}
 
 		//__host__ __device__
 		int zoneid(double height) const
@@ -138,6 +138,7 @@ namespace xmatch
 		}
 	};
 	typedef boost::shared_ptr<Object> ObjectPtr;
+	typedef boost::shared_array<Object> ObjectArr;
 	typedef std::vector<ObjectPtr> ObjectVec;
 
 	/*
@@ -150,34 +151,26 @@ namespace xmatch
 		myfile.close();    
 	}
 	*/
+	/* Tamastol
+		std::ifstream file("tmp.dat");
+		std::vector<char> v;
+		v.reserve(10240);
 
+		//file.seekg(start);    //ha nem az elejerol kell olvasni
+		file.read(&v[0], 10240);
+	*/
 	class Segment
 	{
 	public:
 		int id;
 		bool sorted;
-		float *data;
+		ObjectArr obj;
 
-		Segment(int id, bool sorted) : id(id), sorted(sorted)
+		Segment(int id, ObjectArr obj, bool sorted) : id(id), obj(obj), sorted(sorted)
 		{
-			const int dim = 100;
-			data = new float[dim];
-			//Log("created");
 		}
 
-		~Segment()
-		{
-			if (data == NULL)
-			{
-				//Log("empty");
-			}
-			else
-			{
-				delete[] data;
-				//Log("delete[]ed");
-			}		
-		}
-
+		/*
 		void Log(const char* msg) const
 		{
 			std::string str(msg);
@@ -189,7 +182,7 @@ namespace xmatch
 			boost::mutex::scoped_lock lock(mtx_cout);
 			std::cout << "Segment " << *this << " " << msg << std::endl;
 		}
-
+		*/
 		std::string ToString(const std::string &sep) const
 		{
 			std::stringstream ss;
@@ -224,8 +217,7 @@ namespace xmatch
 		std::string ToString() const
 		{
 			std::stringstream ss;
-	//		ss << "Job " << segA->id << "x" << segB->id; // << " -> " << status;
-			ss << segA->id << " " << segB->id; // << " -> " << status;
+			ss << segA->id << "x" << segB->id << ":" << status; 
 			return ss.str();
 		}
 
@@ -285,7 +277,7 @@ namespace xmatch
 			return nextjob;
 		}
 
-		// Race condition with Next...() ???????????????????????
+		// ??? race-condition with Next...() 
 		void SetStatus(JobPtr job, JobStatus status)
 		{
 			boost::mutex::scoped_lock lock(mtx);
@@ -377,7 +369,7 @@ namespace xmatch
 		std::string ofile;
 		std::vector<std::string> ifiles;
 		double zh_arcsec, sr_arcsec;
-		int num_threads;
+		int num_threads, num_obj;
 		try
 		{
 			options.add_options()
@@ -385,6 +377,7 @@ namespace xmatch
 				("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 				("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
 				("nthreads,n", po::value<int>(&num_threads)->default_value(1), "number of threads")
+				("chunk,c", po::value<int>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
 				("verbose,v", po::value<int>()->implicit_value(1), "enable verbosity (optionally specify level)")
 				("help,h", "print help message")
 			;
@@ -434,38 +427,66 @@ namespace xmatch
 		//std::cout << "Input file(s): " << vm["input-file"].as< std::vector<std::string> >() << std::endl;
 		if (verbose)
 		{
-			std::cout << "Input file(s): " << ifiles << std::endl;
-			if (!ofile.empty()) std::cout << "Output file: " << opath << std::endl;
-			std::cout << "Search radius: " << sr_arcsec << std::endl;                
-			std::cout << "Zone height: " << zh_arcsec << std::endl;                
-			std::cout << "# of threads: " << num_threads << std::endl;                
-			std::cout << "Verbosity: " << vm["verbose"].as<int>() << std::endl;
+			std::cout << " -1- Input file(s): " << ifiles << std::endl;
+			if (!ofile.empty()) std::cout << " -1- Output file: " << opath << std::endl;
+			std::cout << " -1- Search radius: " << sr_arcsec << std::endl;                
+			std::cout << " -1- Zone height: " << zh_arcsec << std::endl;                
+			std::cout << " -1- # of threads: " << num_threads << std::endl;                
+			std::cout << " -1- Verbosity: " << vm["verbose"].as<int>() << std::endl;
 		}
 
-		//// file_size and i/o start here... need objects in segments now...
-		std::vector<uintmax_t> isizes;
-		
+		// input files
+		fs::path inApath = ifiles[0];
+		fs::path inBpath = ifiles[1];
+
+		uintmax_t inAsize, inBsize, inAlen, inBlen;
 		try
 		{
+			inAsize = fs::file_size(inApath);  
+			inBsize = fs::file_size(inBpath);  
+			inAlen = inAsize / sizeof(Object);
+			inBlen = inBsize / sizeof(Object);
 		}
 		catch (std::exception& exc)
 		{
 			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
 			std::cout << "Error: " << std::endl << "   File not found! " << std::endl ;
+			return 3;
 		}
-
-		//fs::ifstream is0(in0, std::ios::in | std::ios::binary);
-		
+		// swap if B is smaller
+		bool swap = false;
+		if (inBlen < inAlen)
+		{
+			if (verbose > 1) std::cout << " -2- Swapping order of files" << std::endl;
+			swap = true;
+			std::swap(inAlen,inBlen);
+			std::swap(inApath,inBpath);
+		}
+		if (verbose>1) 
+			std::cout << " -2- # of objects for RAM: " << inAlen << std::endl
+					  << " -2- # of objects for FIL: " << inBlen << std::endl;		
 
 		// load segments from file A
+		if (verbose>1) std::cout << " -2- Reading smaller file" << std::endl;
 		SegmentVec segmentsRam;
-		for (size_t i=0; i<5; i++) 
 		{
-			Segment *s = new Segment(i, true); // sorted for now
-			SegmentPtr sp(s); 
-			segmentsRam.push_back(sp);
-		}	
+			fs::ifstream file(inApath, std::ios::in | std::ios::binary);
+			uintmax_t numSeg = inAlen / num_obj + 1;
+			for (int i=0; i<numSeg; i++) 
+			{
+				int num = 88;
+				Object* _obj = new Object[num];
+				file.read((char*)_obj,num*sizeof(Object));
+
+				ObjectArr obj(_obj);
+				Segment *s = new Segment(i, obj, true); 
+				SegmentPtr sp(s); 
+				segmentsRam.push_back(sp);
+			}	
+		}
 		// sort segments of A in parallel [tbd]
+
+		return 0;
 
 		// 
 		// loop on file B
@@ -480,7 +501,7 @@ namespace xmatch
 			size_t num_seg = num_threads;
 			for (SegmentVec::size_type i=0; i<num_seg; i++)
 			{
-				Segment *s = new Segment(i+loop*num_seg,true); // sorted for now
+				Segment *s = NULL; //new Segment(i+loop*num_seg,true); // sorted for now
 				SegmentPtr sp(s); 
 				segmentsFile.push_back(sp);
 			}
