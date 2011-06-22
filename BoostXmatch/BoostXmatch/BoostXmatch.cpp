@@ -139,13 +139,14 @@ namespace xmatch
 	class Segment
 	{
 	public:
-		int id, num;
+		uint32_t id, num;
 		bool sorted;
 		Object *obj;
 
-		Segment(int id, int num) : id(id), num(num), sorted(false) //, obj((Object*)NULL)
+		Segment(uint32_t id, uint32_t num) : id(id), num(num), sorted(false) 
 		{
-			obj = new (std::nothrow) Object[num];
+			obj = new Object[num];
+			// Log("new-ed");
 		}
 
 		~Segment()
@@ -154,9 +155,13 @@ namespace xmatch
 			{
 				delete[] obj;
 				obj = NULL;
+				// Log("delete[]-ed");
+			}
+			else 
+			{
+				// Log("empty");
 			}
 		}
-
 		/*
 		void Log(const char* msg) const
 		{
@@ -200,9 +205,10 @@ namespace xmatch
 	{
 	public:
 		SegmentPtr segA, segB;
+		bool swap;
 		JobStatus status;
 
-		Job(SegmentPtr a, SegmentPtr b) : segA(a), segB(b), status(pending)	{ }
+		Job(SegmentPtr a, SegmentPtr b, bool swap) : segA(a), segB(b), swap(swap), status(pending) { }
 
 		std::string ToString() const
 		{
@@ -228,12 +234,12 @@ namespace xmatch
 		JobVec jobs;
 
 	public:
-		JobManager(const SegmentVec& segA, const SegmentVec& segB) 
+		JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap) 
 		{
 			for (SegmentVec::size_type iA=0; iA<segA.size(); iA++)
 			for (SegmentVec::size_type iB=0; iB<segB.size(); iB++)
 			{
-				JobPtr job(new Job(segA[iA],segB[iB]));
+				JobPtr job(new Job(segA[iA],segB[iB],swap));
 				jobs.push_back(job);
 			}		
 		}
@@ -280,11 +286,11 @@ namespace xmatch
 	class Worker
 	{    
 	public:
-		int id;
+		uint32_t id;
 		JobManagerPtr jobman;
 		JobPtr oldjob;
 
-		Worker(unsigned id, JobManagerPtr jobman) : id(id), jobman(jobman), oldjob((Job*)NULL)
+		Worker(uint32_t id, JobManagerPtr jobman) : id(id), jobman(jobman), oldjob((Job*)NULL)
 		{
 		}
 
@@ -358,7 +364,7 @@ namespace xmatch
 		std::vector<std::string> ifiles;
 		std::string ofile;
 		double zh_arcsec, sr_arcsec;
-		int num_threads, num_obj;
+		uint32_t num_threads, num_obj;
 
 		po::options_description options("Options");
 		po::variables_map vm;
@@ -368,9 +374,9 @@ namespace xmatch
 				("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
 				("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 				("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
-				("threads,t", po::value<int>(&num_threads)->default_value(1), "number of threads")
-				("nobject,n", po::value<int>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
-				("verbose,v", po::value<int>()->implicit_value(1), "enable verbosity (optionally specify level)")
+				("threads,t", po::value<uint32_t>(&num_threads)->default_value(1), "number of threads")
+				("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
+				("verbose,v", po::value<uint32_t>()->implicit_value(1), "enable verbosity (optionally specify level)")
 				("help,h", "print help message")
 			;
 			// hidden 
@@ -412,8 +418,8 @@ namespace xmatch
 		// default zone height is radius
 		if (zh_arcsec == 0) zh_arcsec = sr_arcsec;
 
-		int verbose = 0;
-		if (vm.count("verbose")) verbose = vm["verbose"].as<int>();
+		uint32_t verbose = 0;
+		if (vm.count("verbose")) verbose = vm["verbose"].as<uint32_t>();
 
 		fs::path opath(ofile);
 
@@ -424,7 +430,7 @@ namespace xmatch
 			if (!ofile.empty()) std::cout << " -1- Output file: " << opath << std::endl;
 			std::cout << " -1- Search radius: " << sr_arcsec << std::endl;                
 			std::cout << " -1- Zone height: " << zh_arcsec << std::endl;                
-			std::cout << " -1- Verbosity: " << vm["verbose"].as<int>() << std::endl;
+			std::cout << " -1- Verbosity: " << verbose << std::endl;
 			std::cout << " -1- # of threads: " << num_threads << std::endl;                
 			std::cout << " -1- # of obj/seg: " << num_obj << std::endl;                
 		}
@@ -433,18 +439,20 @@ namespace xmatch
 		fs::path inApath = ifiles[0];
 		fs::path inBpath = ifiles[1];
 
-		uintmax_t inAsize, inBsize, inAlen, inBlen;
+		uintmax_t inAsize, inBsize;
+		uint32_t inAlen, inBlen;
 		try
 		{
 			inAsize = fs::file_size(inApath);  
 			inBsize = fs::file_size(inBpath);  
-			inAlen = inAsize / sizeof(Object);
-			inBlen = inBsize / sizeof(Object);
+			inAlen = (uint32_t) (inAsize / sizeof(Object));
+			inBlen = (uint32_t) (inBsize / sizeof(Object));
 		}
 		catch (std::exception& exc)
 		{
 			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   File not found! " << std::endl ;
+			//std::cout << "Error: " << std::endl << "   File not found! " << std::endl ;
+			std::cout << "Error: " << std::endl << "   " << exc.what() << std::endl;
 			return 3;
 		}
 		// swap if B is smaller
@@ -465,17 +473,19 @@ namespace xmatch
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(inApath, std::ios::in | std::ios::binary);
-			int id = 0;
-			int len = inAlen;
+			uint32_t id = 0;
+			uint32_t len = inAlen;
 			while (len > 0)
 			{
-				int num = (len > num_obj) ? num_obj : len;
+				uint32_t num = (len > num_obj) ? num_obj : len;
 				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
 				len -= num;
 				// create and load segment
 				Segment *s = new Segment(id++, num); 
-				file.read((char*)s->obj,num*sizeof(Object));
+				file.read( (char*)s->obj, s->num * sizeof(Object));
+				std::cout.setf( std::ios::fixed );
 				std::cout << ":: " << s->obj[0] << std::endl;
+				std::cout << ":: " << s->obj[2] << std::endl;
 				segmentsRam.push_back(SegmentPtr(s));
 			}	
 		}
@@ -503,13 +513,13 @@ namespace xmatch
 			// sort segments of B in parallel [tbd]
 
 			// job are provided by the manager
-			JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile));
+			JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
 
 			//std::cout << "THREADS" << std::endl;
 
 			// create new worker threads
 			boost::thread_group threads;	
-			for(int id=0; id<num_threads; id++) 
+			for(uint32_t id=0; id<num_threads; id++) 
 			{
 				Worker w(id,jobman);
 				threads.create_thread(w);
