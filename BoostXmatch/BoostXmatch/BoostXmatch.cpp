@@ -146,7 +146,7 @@ namespace xmatch
 		Segment(uint32_t id, uint32_t num) : id(id), num(num), sorted(false) 
 		{
 			obj = new Object[num];
-			// Log("new-ed");
+			Log("new-ed");
 		}
 
 		~Segment()
@@ -155,14 +155,14 @@ namespace xmatch
 			{
 				delete[] obj;
 				obj = NULL;
-				// Log("delete[]-ed");
+				Log("delete[]-ed");
 			}
 			else 
 			{
-				// Log("empty");
+				Log("empty");
 			}
 		}
-		/*
+		///*
 		void Log(const char* msg) const
 		{
 			std::string str(msg);
@@ -174,7 +174,7 @@ namespace xmatch
 			boost::mutex::scoped_lock lock(mtx_cout);
 			std::cout << "Segment " << *this << " " << msg << std::endl;
 		}
-		*/
+		//*/
 
 		std::string ToString(const std::string &sep) const
 		{
@@ -331,7 +331,7 @@ namespace xmatch
 						else
 							Log(job->ToString() + " matching [new]");
 	//						Log(job->ToString() + " 2");
-						boost::this_thread::sleep(boost::posix_time::milliseconds(1+gRand.Uni()));
+						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + 10*gRand.Uni()));
 						jobman->SetStatus(job,finished);
 
 						// saved what's loaded on the "gpu" now
@@ -483,32 +483,36 @@ namespace xmatch
 				// create and load segment
 				Segment *s = new Segment(id++, num); 
 				file.read( (char*)s->obj, s->num * sizeof(Object));
-				std::cout.setf( std::ios::fixed );
-				std::cout << ":: " << s->obj[0] << std::endl;
-				std::cout << ":: " << s->obj[2] << std::endl;
+				//std::cout.setf( std::ios::fixed );
+				//std::cout << ":: " << s->obj[0] << std::endl;
+				//std::cout << ":: " << s->obj[2] << std::endl;
 				segmentsRam.push_back(SegmentPtr(s));
 			}	
 		}
 		// sort segments of A in parallel [tbd]
 
-		return 0;
-
 		// 
 		// loop on file B
 		//
-		int Nloop = 1;
-		for (int loop=0; loop<Nloop; loop++)
+		fs::ifstream file(inBpath, std::ios::in | std::ios::binary);
+		uint32_t id = 0;
+		uint32_t len = inBlen;
+		while (len > 0)
 		{
-			//std::cout << "FILE" << std::endl;
-
 			// load new segments from file B
 			SegmentVec segmentsFile;
-			size_t num_seg = num_threads;
-			for (SegmentVec::size_type i=0; i<num_seg; i++)
+			for (SegmentVec::size_type i=0; i<num_threads; i++)
 			{
-				Segment *s = NULL; //new Segment(i+loop*num_seg,true); // sorted for now
-				SegmentPtr sp(s); 
-				segmentsFile.push_back(sp);
+				uint32_t num = (len > num_obj) ? num_obj : len;
+				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
+				len -= num;
+				// create and load segment
+				Segment *s = new Segment(id++, num); 
+				file.read( (char*)s->obj, s->num * sizeof(Object));
+				//std::cout.setf( std::ios::fixed );
+				//std::cout << ":: " << s->obj[0] << std::endl;
+				//std::cout << ":: " << s->obj[2] << std::endl;
+				segmentsFile.push_back(SegmentPtr(s));
 			}
 			// sort segments of B in parallel [tbd]
 
