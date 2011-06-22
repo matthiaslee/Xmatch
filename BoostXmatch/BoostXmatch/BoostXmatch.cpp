@@ -289,8 +289,10 @@ namespace xmatch
 		uint32_t id;
 		JobManagerPtr jobman;
 		JobPtr oldjob;
+		fs::path prefix;
 
-		Worker(uint32_t id, JobManagerPtr jobman) : id(id), jobman(jobman), oldjob((Job*)NULL)
+		Worker(uint32_t id, JobManagerPtr jobman, fs::path prefix) 
+			: id(id), jobman(jobman), prefix(prefix), oldjob((Job*)NULL)
 		{
 		}
 
@@ -323,12 +325,12 @@ namespace xmatch
 					else
 					{
 						if (oldjob==NULL)
-							Log(job->ToString() + " [null]");
+							Log(job->ToString() + " \t[null]");
 						else if (job->segA->id==oldjob->segA->id || job->segB->id==oldjob->segB->id)
-							Log(job->ToString() + " [cached]");
+							Log(job->ToString() + " \t[cached]");
 						else
-							Log(job->ToString() + " [new]");
-						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + gRand.Uni(500)));
+							Log(job->ToString() + " \t[new]");
+						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + gRand.Uni(1000)));
 						jobman->SetStatus(job,finished);
 
 						// saved what's loaded on the "gpu" now
@@ -475,14 +477,10 @@ namespace xmatch
 			while (len > 0)
 			{
 				uint32_t num = (len > num_obj) ? num_obj : len;
-				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
 				len -= num;
-				// create and load segment
+				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
 				Segment *s = new Segment(id++, num); 
 				file.read( (char*)s->obj, s->num * sizeof(Object));
-				//std::cout.setf( std::ios::fixed );
-				//std::cout << ":: " << s->obj[0] << std::endl;
-				//std::cout << ":: " << s->obj[2] << std::endl;
 				segmentsRam.push_back(SegmentPtr(s));
 			}	
 		}
@@ -501,15 +499,13 @@ namespace xmatch
 			for (SegmentVec::size_type i=0; i<num_threads; i++)
 			{
 				uint32_t num = (len > num_obj) ? num_obj : len;
-				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
 				len -= num;
-				// create and load segment
+				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
 				Segment *s = new Segment(id++, num); 
 				file.read( (char*)s->obj, s->num * sizeof(Object));
-				//std::cout.setf( std::ios::fixed );
-				//std::cout << ":: " << s->obj[0] << std::endl;
-				//std::cout << ":: " << s->obj[2] << std::endl;
-				segmentsFile.push_back(SegmentPtr(s));
+				SegmentPtr sptr(s);
+				if (num>0)
+					segmentsFile.push_back(sptr);
 			}
 			// sort segments of B in parallel [tbd]
 
@@ -522,7 +518,7 @@ namespace xmatch
 			boost::thread_group threads;	
 			for(uint32_t id=0; id<num_threads; id++) 
 			{
-				Worker w(id,jobman);
+				Worker w(id,jobman,fs::path(ofile));
 				threads.create_thread(w);
 			}
 			// anything to do in main?
