@@ -96,10 +96,10 @@ namespace xmatch
 			}
 		}
 
-		int Uni()
+		int Uni(int max)
 		{
 			boost::mutex::scoped_lock lock(mtx);
-			boost::uniform_int<> uni_dist(0,5);
+			boost::uniform_int<> uni_dist(0,max);
 			boost::variate_generator<base_generator_type&, boost::uniform_int<> > uni(*generator, uni_dist);		
 			return uni();
 		}
@@ -213,7 +213,7 @@ namespace xmatch
 		std::string ToString() const
 		{
 			std::stringstream ss;
-			ss << segA->id << "x" << segB->id << ":" << status; 
+			ss << "Job " << segA->id << "x" << segB->id; // << ":" << status; 
 			return ss.str();
 		}
 
@@ -299,8 +299,8 @@ namespace xmatch
 			boost::mutex::scoped_lock lock(mtx_cout);
 			//if (id!=0) return;
 			std::cout 
-				// << "Worker " 
-				<< id 
+				<< "Worker " 
+				<< id << ": "
 				//<< " [" << boost::this_thread::get_id() << "] " 
 				<< " " << msg << std::endl;
 		}
@@ -323,15 +323,12 @@ namespace xmatch
 					else
 					{
 						if (oldjob==NULL)
-							Log(job->ToString() + " matching [new] (null)");
-	//						Log(job->ToString() + " 0");
+							Log(job->ToString() + " [null]");
 						else if (job->segA->id==oldjob->segA->id || job->segB->id==oldjob->segB->id)
-							Log(job->ToString() + " matching [cached]");
-	//						Log(job->ToString() + " 1");
+							Log(job->ToString() + " [cached]");
 						else
-							Log(job->ToString() + " matching [new]");
-	//						Log(job->ToString() + " 2");
-						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + 10*gRand.Uni()));
+							Log(job->ToString() + " [new]");
+						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + gRand.Uni(500)));
 						jobman->SetStatus(job,finished);
 
 						// saved what's loaded on the "gpu" now
