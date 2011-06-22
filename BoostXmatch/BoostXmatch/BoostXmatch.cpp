@@ -285,16 +285,13 @@ namespace xmatch
 
 	class Worker
 	{    
+	private:		
+		JobPtr oldjob;
+		JobManagerPtr jobman;
+		fs::path outpath;
+
 	public:
 		uint32_t id;
-		JobManagerPtr jobman;
-		JobPtr oldjob;
-		fs::path prefix;
-
-		Worker(uint32_t id, JobManagerPtr jobman, fs::path prefix) 
-			: id(id), jobman(jobman), prefix(prefix), oldjob((Job*)NULL)
-		{
-		}
 
 		void Log(std::string msg)
 		{
@@ -307,8 +304,17 @@ namespace xmatch
 				<< " " << msg << std::endl;
 		}
 
+		Worker(uint32_t id, JobManagerPtr jobman, fs::path prefix) : id(id), jobman(jobman), outpath(prefix), oldjob((Job*)NULL)
+		{
+			std::stringstream ss; 
+			ss << "." << id;
+			outpath.replace_extension(ss.str());
+		}
+
 		void operator()()
 		{   
+			// open the output file
+			fs::ofstream outfile(outpath, std::ios::out | std::ios::app); //|std::ios::binary);
 			bool keepProcessing = true;
 
 			while(keepProcessing)  
@@ -324,13 +330,32 @@ namespace xmatch
 					}
 					else
 					{
-						if (oldjob==NULL)
-							Log(job->ToString() + " \t[null]");
-						else if (job->segA->id==oldjob->segA->id || job->segB->id==oldjob->segB->id)
-							Log(job->ToString() + " \t[cached]");
-						else
-							Log(job->ToString() + " \t[new]");
+						// some info for debug
+						{
+							if (oldjob==NULL)
+								Log(job->ToString() + " \t[null]");
+							else if (job->segA->id==oldjob->segA->id || job->segB->id==oldjob->segB->id)
+								Log(job->ToString() + " \t[cached]");
+							else
+								Log(job->ToString() + " \t[new]");
+						}
+						// do the work
 						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + gRand.Uni(1000)));
+
+						for (uint32_t iA=0; iA<job->segA->num; iA++)
+						for (uint32_t iB=0; iB<job->segB->num; iB++)
+						{
+							Object a = job->segA->obj[iA];
+							Object b = job->segB->obj[iB];
+
+							// math
+							if (a.id == b.id)
+							{
+								outfile << a.id << " " << b.id << std::endl;
+							}
+						}
+
+						// done
 						jobman->SetStatus(job,finished);
 
 						// saved what's loaded on the "gpu" now
@@ -504,15 +529,12 @@ namespace xmatch
 				Segment *s = new Segment(id++, num); 
 				file.read( (char*)s->obj, s->num * sizeof(Object));
 				SegmentPtr sptr(s);
-				if (num>0)
-					segmentsFile.push_back(sptr);
+				if (num>0) segmentsFile.push_back(sptr);
 			}
 			// sort segments of B in parallel [tbd]
 
 			// job are provided by the manager
 			JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
-
-			//std::cout << "THREADS" << std::endl;
 
 			// create new worker threads
 			boost::thread_group threads;	
@@ -526,8 +548,6 @@ namespace xmatch
 
 			// wait for threads to finish
 			threads.join_all();
-		
-			//std::cout << "JOIN" << std::endl;
 		}
 
 		return 0;
