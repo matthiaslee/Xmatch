@@ -44,9 +44,7 @@ THE SOFTWARE.
 #include <boost/random/uniform_int.hpp>
 //#include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
-
-// This is a typedef for a random number generator.
-// Try boost::mt19937 or boost::ecuyer1988 instead of boost::minstd_rand
+// This is a typedef for a random number generator; try boost::mt19937 or boost::ecuyer1988 instead of boost::minstd_rand
 typedef boost::minstd_rand base_generator_type;
 
 namespace fs = boost::filesystem;
@@ -67,17 +65,16 @@ namespace xmatch
 		return os;
 	};
 
-	/*
 	// Calls the provided work function and returns the number of milliseconds 
 	// that it takes to call that function.
 	template <class Function>
-	__int64 time_call(Function&& f)
+	int64_t time_call(Function&& f)
 	{
-	   __int64 begin = GetTickCount();
+	   int64_t begin = GetTickCount();
 	   f();
 	   return GetTickCount() - begin;
 	}
-	*/
+
 
 	class Random
 	{
@@ -113,7 +110,6 @@ namespace xmatch
 
 	struct Object
 	{
-	public:
 		int64_t id;
 		double ra, dec;
 
@@ -135,45 +131,30 @@ namespace xmatch
 			return out;
 		}
 	};
+/*
 	typedef boost::shared_ptr<Object> ObjectPtr;
 	typedef std::vector<ObjectPtr> ObjectVec;
+*/
 
-	/*
-	// read binary files
-	ObjectVec LoadBin(std::vector<Object>& obj, const fs::path& path)
-	{
-		fs::ifstream myfile(path, std::ios::in | std::ios::binary);
-		if (myfile.is_open()) 
-			myfile.read( (char*)o, obj.size() * sizeof(object) );
-		myfile.close();    
-	}
-
-	*/
-	/* Tamastol
-		std::ifstream file("tmp.dat");
-		std::vector<char> v;
-		v.reserve(10240);
-
-		//file.seekg(start);    //ha nem az elejerol kell olvasni
-		file.read(&v[0], 10240);
-	*/
 	class Segment
 	{
 	public:
-		int id;
+		int id, num;
 		bool sorted;
-		std::vector<Object> obj;
+		Object *obj;
 
-		Segment(int id, int num) : id(id), sorted(false)
+		Segment(int id, int num) : id(id), num(num), sorted(false) //, obj((Object*)NULL)
 		{
-			obj.reserve(num);
-			//obj[0].id = 10;
-			//obj[0].ra = 99;
+			obj = new (std::nothrow) Object[num];
 		}
 
 		~Segment()
 		{
-			obj.clear();
+			if (obj != NULL)
+			{
+				delete[] obj;
+				obj = NULL;
+			}
 		}
 
 		/*
@@ -211,7 +192,9 @@ namespace xmatch
 	typedef boost::shared_ptr<Segment> SegmentPtr;
 	typedef std::vector<SegmentPtr> SegmentVec;
 
+
 	typedef enum { pending, running, finished } JobStatus;
+
 
 	class Job
 	{
@@ -284,7 +267,7 @@ namespace xmatch
 			return nextjob;
 		}
 
-		// ??? race-condition with Next...() 
+		// TODO: Is this a potential race-condition problem with Next...() 
 		void SetStatus(JobPtr job, JobStatus status)
 		{
 			boost::mutex::scoped_lock lock(mtx);
@@ -359,6 +342,7 @@ namespace xmatch
 			}  
 		}
 	};
+
 
 	/*
 	Outline:
@@ -488,10 +472,10 @@ namespace xmatch
 				int num = (len > num_obj) ? num_obj : len;
 				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
 				len -= num;
-
+				// create and load segment
 				Segment *s = new Segment(id++, num); 
-				// std::cout << ":: " << s->obj[0] << std::endl;
-				file.read((char*)(&(s->obj[0])),num*sizeof(Object));
+				file.read((char*)s->obj,num*sizeof(Object));
+				std::cout << ":: " << s->obj[0] << std::endl;
 				segmentsRam.push_back(SegmentPtr(s));
 			}	
 		}
