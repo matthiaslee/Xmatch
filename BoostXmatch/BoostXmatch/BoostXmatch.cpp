@@ -159,7 +159,7 @@ namespace xmatch
 		Segment(uint32_t id, uint32_t num) : id(id), num(num), sorted(false) 
 		{
 			obj = new Object[num];
-			Log("new-ed");
+			//Log("new-ed");
 		}
 
 		~Segment()
@@ -168,14 +168,14 @@ namespace xmatch
 			{
 				delete[] obj;
 				obj = NULL;
-				Log("delete[]-ed");
+				//Log("delete[]-ed");
 			}
 			else 
 			{
-				Log("empty");
+				//Log("empty");
 			}
 		}
-		///*
+		/*
 		void Log(const char* msg) const
 		{
 			std::string str(msg);
@@ -187,7 +187,7 @@ namespace xmatch
 			boost::mutex::scoped_lock lock(mtx_cout);
 			std::cout << "Segment " << *this << " " << msg << std::endl;
 		}
-		//*/
+		*/
 
 		std::string ToString(const std::string &sep) const
 		{
@@ -215,7 +215,7 @@ namespace xmatch
 	{
 		boost::mutex mtx;
 		SegmentVec seg;
-		int index;
+		uint32_t index;
 
 	public:
 		SegmentManager(SegmentVec& seg) : seg(seg), index(0) {}
@@ -234,6 +234,7 @@ namespace xmatch
 		}
 	};
 	typedef boost::shared_ptr<SegmentManager> SegmentManagerPtr;
+
 
 	class Sorter
 	{    		
@@ -287,7 +288,6 @@ namespace xmatch
 			}  
 		}
 	};
-
 
 
 	enum JobStatus { pending, running, finished };
@@ -462,6 +462,119 @@ namespace xmatch
 		}
 	};
 
+	struct FileDesc
+	{
+		fs::path path;
+		uintmax_t size;
+
+		FileDesc() : path(""), size(0) {}
+
+		FileDesc(fs::path path) : path(path), size(0)
+		{
+			if (fs::is_regular_file(path))
+				size = fs::file_size(path);
+		}
+			
+		friend std::ostream& operator<< (std::ostream& out, const FileDesc& fd) 
+		{
+			out << fd.path;
+			return out;
+		}
+	};
+
+
+	struct Parameter
+	{
+		uint32_t num_threads, num_obj, verbose;
+		double zh_arcsec, sr_arcsec;
+		FileDesc fileA, fileB;
+		fs::path outpath;
+		int error;
+		
+		//Parameter() : error(0), verbose(0), num_threads(0), num_obj(0), zh_arcsec(0), sr_arcsec(0), fileA(""), fileB(""), outpath("") {}
+		Parameter(int argc, char* argv[]) : error(0), verbose(0)
+		{
+			po::options_description options("Options");
+			po::variables_map vm;
+			std::string ofile;
+			std::vector<std::string> ifiles;
+			try
+			{
+				options.add_options()
+					("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
+					("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
+					("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
+					("threads,t", po::value<uint32_t>(&num_threads)->default_value(1), "number of threads")
+					("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
+					("verbose,v", po::value<uint32_t>()->implicit_value(1), "enable verbosity (optionally specify level)")
+					("help,h", "print help message")
+				;
+				// hidden 
+				po::options_description opt_hidden("Hidden options");        
+				opt_hidden.add_options()
+					("input", po::value< std::vector<std::string> >(&ifiles), "input file")
+				;        
+				// all options
+				po::options_description opt_cmd("Command options");
+				opt_cmd.add(options).add(opt_hidden);
+
+				// use input files without the switch
+				po::positional_options_description p;
+				p.add("input", -1);
+
+				// parse...
+				po::store(po::command_line_parser(argc,argv).options(opt_cmd).positional(p).run(),vm);
+				po::notify(vm);
+			}
+			catch (std::exception& exc)
+			{
+				std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+				std::cout << "Error: " << std::endl << "   " << exc.what() << std::endl;
+				error = 1;
+				return;
+			}
+			if (vm.count("help")) 
+			{
+				std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+				std::cout << "Subversion: $Rev$" << std::endl ;
+				error = 1;
+				return;
+			}
+			if (!vm.count("input") || ifiles.size() != 2)
+			{
+				std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+				std::cout << "Error: " << std::endl << "   Input 2 files!" << std::endl ;
+				std::cout << "Got this: " << std::endl << ifiles << std::endl;
+				error = 2;
+				return;
+			}
+			// default zone height is radius
+			if (zh_arcsec == 0) zh_arcsec = sr_arcsec;
+			if (vm.count("verbose")) verbose = vm["verbose"].as<uint32_t>();
+			fileA = FileDesc(ifiles[0]);
+			fileB = FileDesc(ifiles[1]);
+			if (fileA.size == 0 || fileB.size == 0)
+			{
+				std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
+				std::cout << "Error: " << std::endl << "   File not found! " << std::endl ;
+				error = 3;
+				return;
+			}
+			outpath = ofile;
+		}
+		
+		friend std::ostream& operator<< (std::ostream& out, const Parameter& p) 
+		{
+			out << " -1- Input file(s): " << p.fileA << " " << p.fileB << std::endl;
+			out << " -1- Output file: " << p.outpath << std::endl;
+			out << " -1- Search radius: " << p.sr_arcsec << std::endl;                
+			out << " -1- Zone height: " << p.zh_arcsec << std::endl;                
+			out << " -1- Verbosity: " << p.verbose << std::endl;
+			out << " -1- # of threads: " << p.num_threads << std::endl;                
+			out << " -1- # of obj/seg: " << p.num_obj;                
+			return out;
+		}
+	};
 
 	/*
 	Outline:
@@ -474,176 +587,88 @@ namespace xmatch
 	int _main(int argc, char* argv[])
 	{
 		// parse command line
-		std::vector<std::string> ifiles;
-		std::string ofile;
-		double zh_arcsec, sr_arcsec;
-		uint32_t num_threads, num_obj;
+		Parameter pmt(argc,argv);
+		if (pmt.error) return pmt.error;
+		if (pmt.verbose) std::cout << pmt << std::endl;
 
-		po::options_description options("Options");
-		po::variables_map vm;
-		try
-		{
-			options.add_options()
-				("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
-				("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
-				("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
-				("threads,t", po::value<uint32_t>(&num_threads)->default_value(1), "number of threads")
-				("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
-				("verbose,v", po::value<uint32_t>()->implicit_value(1), "enable verbosity (optionally specify level)")
-				("help,h", "print help message")
-			;
-			// hidden 
-			po::options_description opt_hidden("Hidden options");        
-			opt_hidden.add_options()
-				("input", po::value< std::vector<std::string> >(&ifiles), "input file")
-			;        
-			// all options
-			po::options_description opt_cmd("Command options");
-			opt_cmd.add(options).add(opt_hidden);
-
-			// use input files without the switch
-			po::positional_options_description p;
-			p.add("input", -1);
-
-			// parse...
-			po::store(po::command_line_parser(argc,argv).options(opt_cmd).positional(p).run(),vm);
-			po::notify(vm);
-		}
-		catch (std::exception& exc)
-		{
-            std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   " << exc.what() << std::endl;
-            return 1;
-		}
-		if (vm.count("help")) 
-		{
-            std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Subversion: $Rev$" << std::endl ;
-            return 0;
-        }
-		if (!vm.count("input") || ifiles.size() != 2)
-		{
-			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			std::cout << "Error: " << std::endl << "   Input 2 files!" << std::endl ;
-			std::cout << "Got this: " << std::endl << ifiles << std::endl;
-            return 2;
-		}
-		// default zone height is radius
-		if (zh_arcsec == 0) zh_arcsec = sr_arcsec;
-
-		uint32_t verbose = 0;
-		if (vm.count("verbose")) verbose = vm["verbose"].as<uint32_t>();
-
-		fs::path opath(ofile);
-
-		//std::cout << "Input file(s): " << vm["input-file"].as< std::vector<std::string> >() << std::endl;
-		if (verbose)
-		{
-			std::cout << " -1- Input file(s): " << ifiles << std::endl;
-			if (!ofile.empty()) std::cout << " -1- Output file: " << opath << std::endl;
-			std::cout << " -1- Search radius: " << sr_arcsec << std::endl;                
-			std::cout << " -1- Zone height: " << zh_arcsec << std::endl;                
-			std::cout << " -1- Verbosity: " << verbose << std::endl;
-			std::cout << " -1- # of threads: " << num_threads << std::endl;                
-			std::cout << " -1- # of obj/seg: " << num_obj << std::endl;                
-		}
-
-		// input files
-		fs::path inApath = ifiles[0];
-		fs::path inBpath = ifiles[1];
-
-		uintmax_t inAsize, inBsize;
-		uint32_t inAlen, inBlen;
-		try
-		{
-			inAsize = fs::file_size(inApath);  
-			inBsize = fs::file_size(inBpath);  
-			inAlen = (uint32_t) (inAsize / sizeof(Object));
-			inBlen = (uint32_t) (inBsize / sizeof(Object));
-		}
-		catch (std::exception& exc)
-		{
-			std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-			//std::cout << "Error: " << std::endl << "   File not found! " << std::endl ;
-			std::cout << "Error: " << std::endl << "   " << exc.what() << std::endl;
-			return 3;
-		}
 		// swap if B is smaller
 		bool swap = false;
-		if (inBlen < inAlen)
+		if (pmt.fileB.size < pmt.fileA.size)
 		{
-			if (verbose > 1) std::cout << " -2- Swapping order of files" << std::endl;
+			if (pmt.verbose > 1) std::cout << " -2- Swapping order of files" << std::endl;
 			swap = true;
-			std::swap(inAlen,inBlen);
-			std::swap(inApath,inBpath);
+			std::swap(pmt.fileA, pmt.fileB);
 		}
-		if (verbose>1) 
-			std::cout << " -2- # of objects for RAM: " << inAlen << std::endl
-					  << " -2- # of objects for FIL: " << inBlen << std::endl;		
+		if (pmt.verbose>1) 
+			std::cout << " -2- # of objects for RAM: " << pmt.fileA.size / sizeof(Object) << std::endl
+					  << " -2- # of objects for FIL: " << pmt.fileB.size / sizeof(Object) << std::endl;		
 
-		// load segments from and sort for
-		if (verbose>1) std::cout << " -2- Reading smaller file" << std::endl;
+		//
+		// load segments from small file
+		// 
+		if (pmt.verbose>1) std::cout << " -2- Reading file" << std::endl;
 		SegmentVec segmentsRam;
 		{
-			fs::ifstream file(inApath, std::ios::in | std::ios::binary);
+			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
+			uint32_t len = pmt.fileA.size / sizeof(Object);
 			SegmentVec::size_type sid = 0;
-			uint32_t len = inAlen;
+			// load segments
 			while (len > 0)
 			{
-				uint32_t num = (len > num_obj) ? num_obj : len;
+				uint32_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				if (verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
+				if (pmt.verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
 				file.read( (char*)s->obj, s->num * sizeof(Object));
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
 			// sort segments
-			if (verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			if (pmt.verbose>1) std::cout << " -2- Sorting segments" << std::endl;
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
-				for(uint32_t it=0; it<num_threads; it++) 
-					sorters.create_thread(Sorter(it,segman));
+				for (uint32_t it=0; it<pmt.num_threads; it++) 
+					sorters.create_thread(Sorter(it, segman));
 				sorters.join_all();
 			}
 		}
 
 		// 
-		// loop on file
+		// loop on larger file
 		//
-		fs::ifstream file(inBpath, std::ios::in | std::ios::binary);
+		fs::ifstream file(pmt.fileB.path, std::ios::in | std::ios::binary);
 		SegmentVec::size_type sid = 0;
-		uint32_t len = inBlen;
+		uint32_t len = pmt.fileB.size / sizeof(Object);
 		uint32_t wid = 0;
 		while (len > 0)
 		{
-			// load new segments from file
+			// load segments
 			SegmentVec segmentsFile;
-			for (SegmentVec::size_type i=0; i<num_threads; i++)
+			for (SegmentVec::size_type i=0; i<pmt.num_threads; i++)
 			{
-				uint32_t num = (len > num_obj) ? num_obj : len;
+				uint32_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				if (verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
+				if (pmt.verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
 				file.read( (char*)s->obj, s->num * sizeof(Object));
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}
 			// sort segments
-			if (verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			if (pmt.verbose>1) std::cout << " -2- Sorting segments" << std::endl;
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
-				for(uint32_t it=0; it<num_threads; it++) 
-					sorters.create_thread(Sorter(it,segman));
+				for (uint32_t it=0; it<pmt.num_threads; it++) 
+					sorters.create_thread(Sorter(it, segman));
 				sorters.join_all();
 			}
-			// create jobs and process
-			if (verbose>1) std::cout << " -2- Processing jobs" << std::endl;
+			// process jobs
+			if (pmt.verbose>1) std::cout << " -2- Processing jobs" << std::endl;
 			{
 				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
 				boost::thread_group workers;	
-				for(uint32_t it=0; it<num_threads; it++) 
-					workers.create_thread(Worker(wid++, jobman, fs::path(ofile)));
+				for (uint32_t it=0; it<pmt.num_threads; it++) 
+					workers.create_thread(Worker(wid++, jobman, pmt.outpath));
 				workers.join_all();
 			}
 		}
