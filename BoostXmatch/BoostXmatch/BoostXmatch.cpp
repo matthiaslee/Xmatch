@@ -65,6 +65,8 @@ namespace xmatch
 		return os;
 	};
 
+/* DOES NOT WORK ON LINUX *
+
 	// Calls the provided work function and returns the number of milliseconds 
 	// that it takes to call that function.
 	template <class Function>
@@ -74,6 +76,7 @@ namespace xmatch
 	   f();
 	   return GetTickCount() - begin;
 	}
+*/
 
 
 	class Random
