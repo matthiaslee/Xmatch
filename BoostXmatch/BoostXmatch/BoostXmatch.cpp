@@ -211,6 +211,85 @@ namespace xmatch
 	typedef std::vector<SegmentPtr> SegmentVec;
 
 
+	class SegmentManager
+	{
+		boost::mutex mtx;
+		SegmentVec seg;
+		int index;
+
+	public:
+		SegmentManager(SegmentVec& seg) : seg(seg), index(0) {}
+
+		SegmentPtr Next()
+		{
+			if (index < seg.size())
+			{
+				boost::mutex::scoped_lock lock(mtx);
+				return seg[index++];
+			}
+			else
+			{
+				return SegmentPtr((Segment*)NULL);
+			}
+		}
+	};
+	typedef boost::shared_ptr<SegmentManager> SegmentManagerPtr;
+
+	class Sorter
+	{    		
+		uint32_t id;
+		SegmentManagerPtr segman;
+
+		void Log(std::string msg)
+		{
+			boost::mutex::scoped_lock lock(mtx_cout);
+			//if (id!=0) return;
+			std::cout 
+				<< "Sorter " 
+				<< id << ":"
+				//<< " [" << boost::this_thread::get_id() << "] " 
+				<< " \t" << msg << std::endl;
+		}
+
+	public:
+		Sorter(uint32_t id, SegmentManagerPtr segman) : id(id), segman(segman) {}
+
+		void operator()()
+		{   
+			bool keepProcessing = true;
+
+			while(keepProcessing)  
+			{  
+				try  
+				{  
+					SegmentPtr seg = segman->Next();
+
+					if (seg == NULL) 
+					{
+						Log("-");
+						keepProcessing = false;
+					}
+					else
+					{
+						// do the work
+						Log(seg->ToString());
+						boost::this_thread::sleep(boost::posix_time::milliseconds(gRand.Uni(1000)));
+						seg->sorted = true;
+					}
+				}  
+				// Catch specific exceptions first 
+
+				// Catch general so it doesn't go unnoticed
+				catch (std::exception& exc)  
+				{  
+					Log("Uncaught exception: " + std::string(exc.what()));  
+				}  
+			}  
+		}
+	};
+
+
+
 	enum JobStatus { pending, running, finished };
 
 
@@ -502,7 +581,7 @@ namespace xmatch
 			std::cout << " -2- # of objects for RAM: " << inAlen << std::endl
 					  << " -2- # of objects for FIL: " << inBlen << std::endl;		
 
-		// load segments from file A
+		// load segments from and sort for
 		if (verbose>1) std::cout << " -2- Reading smaller file" << std::endl;
 		SegmentVec segmentsRam;
 		{
@@ -518,11 +597,19 @@ namespace xmatch
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
+			// sort segments
+			if (verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			{
+				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
+				boost::thread_group sorters;	
+				for(uint32_t it=0; it<num_threads; it++) 
+					sorters.create_thread(Sorter(it,segman));
+				sorters.join_all();
+			}
 		}
-		// sort segments of A in parallel [tbd]
 
 		// 
-		// loop on file B
+		// loop on file
 		//
 		fs::ifstream file(inBpath, std::ios::in | std::ios::binary);
 		SegmentVec::size_type sid = 0;
@@ -538,29 +625,28 @@ namespace xmatch
 				Segment *s = new Segment(sid++, num); 
 				if (verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
 				file.read( (char*)s->obj, s->num * sizeof(Object));
-				SegmentPtr sptr(s);
-				if (num > 0) segmentsFile.push_back(sptr);
+				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}
-			// sort segments in parallel [tbd]
-
-			// job are provided by the manager
-			JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
-
-			// create new worker threads
-			boost::thread_group threads;	
-			for(uint32_t it=0; it<num_threads; it++) 
+			// sort segments
+			if (verbose>1) std::cout << " -2- Sorting segments" << std::endl;
 			{
-				Worker w(wid++, jobman, fs::path(ofile));
-				threads.create_thread(w);
+				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
+				boost::thread_group sorters;	
+				for(uint32_t it=0; it<num_threads; it++) 
+					sorters.create_thread(Sorter(it,segman));
+				sorters.join_all();
 			}
-			// anything to do in main?
-			boost::this_thread::yield();
-
-			// wait for threads to finish
-			threads.join_all();
+			// create jobs and process
+			if (verbose>1) std::cout << " -2- Processing jobs" << std::endl;
+			{
+				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
+				boost::thread_group workers;	
+				for(uint32_t it=0; it<num_threads; it++) 
+					workers.create_thread(Worker(wid++, jobman, fs::path(ofile)));
+				workers.join_all();
+			}
 		}
-
 		return 0;
 	}
 
