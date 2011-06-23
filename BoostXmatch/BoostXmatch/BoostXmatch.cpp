@@ -104,8 +104,21 @@ namespace xmatch
 			return uni();
 		}
 	};
-	// global for testing
 	Random gRand(42u);
+
+	
+	struct Cartesian
+	{
+		double x, y, z;
+		Cartesian() : x(0), y(0), z(0) {}
+		Cartesian(double x, double y, double z) : x(x), y(y), z(z) {}
+
+		friend std::ostream& operator<< (std::ostream& out, const Cartesian& o) 
+		{
+			out << o.x << " " << o.y << " " << o.z;
+			return out;
+		}
+	};
 
 
 	struct Object
@@ -131,10 +144,7 @@ namespace xmatch
 			return out;
 		}
 	};
-/*
-	typedef boost::shared_ptr<Object> ObjectPtr;
-	typedef std::vector<ObjectPtr> ObjectVec;
-*/
+
 
 	class Segment
 	{
@@ -198,15 +208,15 @@ namespace xmatch
 	typedef std::vector<SegmentPtr> SegmentVec;
 
 
-	typedef enum { pending, running, finished } JobStatus;
+	enum JobStatus { pending, running, finished };
 
 
 	class Job
 	{
 	public:
+		JobStatus status;
 		SegmentPtr segA, segB;
 		bool swap;
-		JobStatus status;
 
 		Job(SegmentPtr a, SegmentPtr b, bool swap) : segA(a), segB(b), swap(swap), status(pending) { }
 
@@ -229,7 +239,6 @@ namespace xmatch
 
 	class JobManager
 	{
-	private:
 		boost::mutex mtx;
 		JobVec jobs;
 
@@ -284,14 +293,11 @@ namespace xmatch
 
 
 	class Worker
-	{    
-	private:		
+	{    		
+		uint32_t id;
 		JobPtr oldjob;
 		JobManagerPtr jobman;
 		fs::path outpath;
-
-	public:
-		uint32_t id;
 
 		void Log(std::string msg)
 		{
@@ -299,11 +305,12 @@ namespace xmatch
 			//if (id!=0) return;
 			std::cout 
 				<< "Worker " 
-				<< id << ": "
+				<< id << ":"
 				//<< " [" << boost::this_thread::get_id() << "] " 
-				<< " " << msg << std::endl;
+				<< " \t" << msg << std::endl;
 		}
 
+	public:
 		Worker(uint32_t id, JobManagerPtr jobman, fs::path prefix) : id(id), jobman(jobman), outpath(prefix), oldjob((Job*)NULL)
 		{
 			std::stringstream ss; 
@@ -497,16 +504,16 @@ namespace xmatch
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(inApath, std::ios::in | std::ios::binary);
-			uint32_t id = 0;
+			SegmentVec::size_type sid = 0;
 			uint32_t len = inAlen;
 			while (len > 0)
 			{
 				uint32_t num = (len > num_obj) ? num_obj : len;
-				len -= num;
-				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
-				Segment *s = new Segment(id++, num); 
+				Segment *s = new Segment(sid++, num); 
+				if (verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
 				file.read( (char*)s->obj, s->num * sizeof(Object));
 				segmentsRam.push_back(SegmentPtr(s));
+				len -= num;
 			}	
 		}
 		// sort segments of A in parallel [tbd]
@@ -515,32 +522,33 @@ namespace xmatch
 		// loop on file B
 		//
 		fs::ifstream file(inBpath, std::ios::in | std::ios::binary);
-		uint32_t id = 0;
+		SegmentVec::size_type sid = 0;
 		uint32_t len = inBlen;
+		uint32_t wid = 0;
 		while (len > 0)
 		{
-			// load new segments from file B
+			// load new segments from file
 			SegmentVec segmentsFile;
 			for (SegmentVec::size_type i=0; i<num_threads; i++)
 			{
 				uint32_t num = (len > num_obj) ? num_obj : len;
-				len -= num;
-				if (verbose>2) std::cout << " -3- id:" << id << " num:" << num << std::endl;
-				Segment *s = new Segment(id++, num); 
+				Segment *s = new Segment(sid++, num); 
+				if (verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
 				file.read( (char*)s->obj, s->num * sizeof(Object));
 				SegmentPtr sptr(s);
-				if (num>0) segmentsFile.push_back(sptr);
+				if (num > 0) segmentsFile.push_back(sptr);
+				len -= num;				
 			}
-			// sort segments of B in parallel [tbd]
+			// sort segments in parallel [tbd]
 
 			// job are provided by the manager
 			JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
 
 			// create new worker threads
 			boost::thread_group threads;	
-			for(uint32_t id=0; id<num_threads; id++) 
+			for(uint32_t it=0; it<num_threads; it++) 
 			{
-				Worker w(id,jobman,fs::path(ofile));
+				Worker w(wid++, jobman, fs::path(ofile));
 				threads.create_thread(w);
 			}
 			// anything to do in main?
