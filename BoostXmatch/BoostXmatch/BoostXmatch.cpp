@@ -33,6 +33,9 @@ THE SOFTWARE.
 
 #include <math.h>
 
+//#include <thrust/host_vector.h>
+
+
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/date_time.hpp>  
@@ -52,6 +55,23 @@ namespace po = boost::program_options;
 
 #define RAD2DEG 57.295779513082323
 #define THREADS_PER_BLOCK 512
+
+
+struct Object;
+class Segment;
+
+
+/*
+__host__ __device__ func()
+{
+#if __CUDA_ARCH__ == 100
+    // Device code path for compute capability 1.0
+#elif __CUDA_ARCH__ == 200
+    // Device code path for compute capability 2.0
+#elif !defined(__CUDA_ARCH__)
+    // Host code path
+#endif
+}*/
 
 namespace xmatch
 {
@@ -109,7 +129,7 @@ namespace xmatch
 	};
 	Random gRand(42u);
 
-	
+	/*
 	struct Cartesian
 	{
 		double x, y, z;
@@ -122,91 +142,8 @@ namespace xmatch
 			return out;
 		}
 	};
-
-
-	struct Object
-	{
-		int64_t id;
-		double ra, dec;
-
-		//__host__ __device__	
-		Object() : id(-1), ra(0), dec(0) {}
-
-		//__host__ __device__
-		Object(int64_t id, double ra, double dec) : id(id), ra(ra), dec(dec) {}
-
-		//__host__ __device__
-		int zoneid(double height) const
-		{
-			return 0; // (int) rint( (dec+90)/height );
-		}
-
-		friend std::ostream& operator<< (std::ostream& out, const Object& o) 
-		{
-			out << o.id << " " << o.ra << " " << o.dec;
-			return out;
-		}
-	};
-
-
-	class Segment
-	{
-	public:
-		uint32_t id, num;
-		bool sorted;
-		Object *obj;
-
-		Segment(uint32_t id, uint32_t num) : id(id), num(num), sorted(false) 
-		{
-			obj = new Object[num];
-			//Log("new-ed");
-		}
-
-		~Segment()
-		{
-			if (obj != NULL)
-			{
-				delete[] obj;
-				obj = NULL;
-				//Log("delete[]-ed");
-			}
-			else 
-			{
-				//Log("empty");
-			}
-		}
-		/*
-		void Log(const char* msg) const
-		{
-			std::string str(msg);
-			Log(str);
-		}
-
-		void Log(std::string msg) const
-		{
-			boost::mutex::scoped_lock lock(mtx_cout);
-			std::cout << "Segment " << *this << " " << msg << std::endl;
-		}
-		*/
-
-		std::string ToString(const std::string &sep) const
-		{
-			std::stringstream ss;
-			ss << id; // << sep << sorted;
-			return ss.str();
-		}
+	*/
 	
-		std::string ToString() const
-		{
-			return ToString(std::string(":"));
-		}
-
-		friend std::ostream& operator<<(std::ostream &o, const Segment &s)
-		{
-			o << s.ToString();
-			return o;
-		}
-	};
 	typedef boost::shared_ptr<Segment> SegmentPtr;
 	typedef std::vector<SegmentPtr> SegmentVec;
 
@@ -610,12 +547,12 @@ namespace xmatch
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
-			uint32_t len = pmt.fileA.size / sizeof(Object);
-			SegmentVec::size_type sid = 0;
+			uint64_t len = pmt.fileA.size / sizeof(Object);
+			uint32_t sid = 0;
 			// load segments
 			while (len > 0)
 			{
-				uint32_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
+				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
 				if (pmt.verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
 				file.read( (char*)s->obj, s->num * sizeof(Object));
@@ -637,16 +574,16 @@ namespace xmatch
 		// loop on larger file
 		//
 		fs::ifstream file(pmt.fileB.path, std::ios::in | std::ios::binary);
-		SegmentVec::size_type sid = 0;
-		uint32_t len = pmt.fileB.size / sizeof(Object);
+		uint64_t len = pmt.fileB.size / sizeof(Object);
 		uint32_t wid = 0;
+		uint32_t sid = 0;
 		while (len > 0)
 		{
 			// load segments
 			SegmentVec segmentsFile;
-			for (SegmentVec::size_type i=0; i<pmt.num_threads; i++)
+			for (uint64_t i=0; i<pmt.num_threads; i++)
 			{
-				uint32_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
+				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
 				if (pmt.verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
 				file.read( (char*)s->obj, s->num * sizeof(Object));
