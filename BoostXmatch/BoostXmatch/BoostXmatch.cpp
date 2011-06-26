@@ -291,18 +291,20 @@ namespace xmatch
 			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
 			uint64_t len = pmt.fileA.size / sizeof(Obj);
 			uint32_t sid = 0;
+
 			// load segments
 			while (len > 0)
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
 				if (pmt.verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
-				file.read( (char*)s->mObj, s->mNum * sizeof(Obj));
+				s->Load(file);
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
-			// sort segments
+
 			if (pmt.verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
@@ -321,19 +323,20 @@ namespace xmatch
 		uint32_t sid = 0;
 		while (len > 0)
 		{
-			// load segments
 			SegmentVec segmentsFile;
+			// load segments
 			for (uint64_t i=0; i<pmt.num_threads; i++)
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
 				if (pmt.verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
-				file.read( (char*)s->mObj, s->mNum * sizeof(Obj));
+				s->Load(file);
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}
-			// sort segments
+
 			if (pmt.verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
@@ -341,8 +344,9 @@ namespace xmatch
 					sorters.create_thread(Sorter(it, segman));
 				sorters.join_all();
 			}
-			// process jobs
+
 			if (pmt.verbose>1) std::cout << " -2- Processing jobs" << std::endl;
+			// process jobs
 			{
 				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
 				boost::thread_group workers;	

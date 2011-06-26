@@ -9,8 +9,10 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include <boost/shared_ptr.hpp>
+#include <thrust/host_vector.h>
 
 #include "Obj.h"
 
@@ -18,14 +20,18 @@ namespace xmatch
 {
 	class Segment
 	{
+		thrust::host_vector<Obj> dObj;
+
 	public:
 		uint32_t mId;
 		uint64_t mNum;
 		bool mSorted;
 		Obj *mObj;
 
-		Segment(uint32_t mId, uint64_t mNum);
+		Segment(uint32_t id, uint64_t num);
 		~Segment();
+
+		void Load(std::istream &rIs);
 
 		std::string ToString(std::string sep) const;	
 		std::string ToString() const;

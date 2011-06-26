@@ -2,7 +2,6 @@
  *   ID:          $Id$
  *   Revision:    $Rev$
  */
-
 #include <sstream>
 
 #include "Segment.h"
@@ -10,10 +9,10 @@
 
 namespace xmatch
 {
-	Segment::Segment(uint32_t id, uint64_t num) : mId(id), mNum(num), mSorted(false) 
+	Segment::Segment(uint32_t id, uint64_t num) : mId(id), mNum(num), mSorted(false), dObj(num)
 	{
 		mObj = new Obj[num];
-		//Log("new-ed");
+		//Log("new-ed");		
 	}
 
 	Segment::~Segment()
@@ -42,6 +41,12 @@ namespace xmatch
 		std::cout << "Segment " << *this << " " << msg << std::endl;
 	}
 	*/
+
+	void Segment::Load(std::istream &rIs)
+	{
+		rIs.read( (char*)mObj, mNum * sizeof(Obj));
+		//dObj[0].mRa = 111;
+	}
 
 	std::string Segment::ToString(const std::string sep) const
 	{
