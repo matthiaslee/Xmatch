@@ -33,7 +33,8 @@ THE SOFTWARE.
 
 #include <math.h>
 
-//#include <thrust/host_vector.h>
+#include "Sorter.h"
+#include "Worker.h"
 
 
 #include <boost/thread.hpp>
@@ -55,11 +56,6 @@ namespace po = boost::program_options;
 
 #define RAD2DEG 57.295779513082323
 #define THREADS_PER_BLOCK 512
-
-
-struct Object;
-class Segment;
-
 
 /*
 __host__ __device__ func()
@@ -144,260 +140,6 @@ namespace xmatch
 	};
 	*/
 	
-	typedef boost::shared_ptr<Segment> SegmentPtr;
-	typedef std::vector<SegmentPtr> SegmentVec;
-
-
-	class SegmentManager
-	{
-		boost::mutex mtx;
-		SegmentVec seg;
-		uint32_t index;
-
-	public:
-		SegmentManager(SegmentVec& seg) : seg(seg), index(0) {}
-
-		SegmentPtr Next()
-		{
-			if (index < seg.size())
-			{
-				boost::mutex::scoped_lock lock(mtx);
-				return seg[index++];
-			}
-			else
-			{
-				return SegmentPtr((Segment*)NULL);
-			}
-		}
-	};
-	typedef boost::shared_ptr<SegmentManager> SegmentManagerPtr;
-
-
-	class Sorter
-	{    		
-		uint32_t id;
-		SegmentManagerPtr segman;
-
-		void Log(std::string msg)
-		{
-			boost::mutex::scoped_lock lock(mtx_cout);
-			//if (id!=0) return;
-			std::cout 
-				<< "Sorter " 
-				<< id << ":"
-				//<< " [" << boost::this_thread::get_id() << "] " 
-				<< " \t" << msg << std::endl;
-		}
-
-	public:
-		Sorter(uint32_t id, SegmentManagerPtr segman) : id(id), segman(segman) {}
-
-		void operator()()
-		{   
-			bool keepProcessing = true;
-
-			while(keepProcessing)  
-			{  
-				try  
-				{  
-					SegmentPtr seg = segman->Next();
-
-					if (seg == NULL) 
-					{
-						Log("-");
-						keepProcessing = false;
-					}
-					else
-					{
-						// do the work
-						Log(seg->ToString());
-						boost::this_thread::sleep(boost::posix_time::milliseconds(gRand.Uni(1000)));
-						seg->sorted = true;
-					}
-				}  
-				// Catch specific exceptions first 
-
-				// Catch general so it doesn't go unnoticed
-				catch (std::exception& exc)  
-				{  
-					Log("Uncaught exception: " + std::string(exc.what()));  
-				}  
-			}  
-		}
-	};
-
-
-	enum JobStatus { pending, running, finished };
-
-
-	class Job
-	{
-	public:
-		JobStatus status;
-		SegmentPtr segA, segB;
-		bool swap;
-
-		Job(SegmentPtr a, SegmentPtr b, bool swap) : segA(a), segB(b), swap(swap), status(pending) { }
-
-		std::string ToString() const
-		{
-			std::stringstream ss;
-			ss << "Job " << segA->id << "x" << segB->id; // << ":" << status; 
-			return ss.str();
-		}
-
-		friend std::ostream& operator<<(std::ostream &o, const Job &blk)
-		{
-			o << blk.ToString();
-			return o;
-		}
-	};
-	typedef boost::shared_ptr<Job> JobPtr;
-	typedef std::vector<JobPtr> JobVec;
-
-
-	class JobManager
-	{
-		boost::mutex mtx;
-		JobVec jobs;
-
-	public:
-		JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap) 
-		{
-			for (SegmentVec::size_type iA=0; iA<segA.size(); iA++)
-			for (SegmentVec::size_type iB=0; iB<segB.size(); iB++)
-			{
-				JobPtr job(new Job(segA[iA],segB[iB],swap));
-				jobs.push_back(job);
-			}		
-		}
-
-		//	Prefers jobs with segments that the worker already holds
-		JobPtr NextPreferredJob(JobPtr oldjob)
-		{
-			boost::mutex::scoped_lock lock(mtx);
-			JobPtr nextjob((Job*)NULL);
-			for (JobVec::size_type i=0; i<jobs.size(); i++)
-			{
-				JobPtr job = jobs[i];
-				if (job->status == pending)
-				{
-					if (nextjob == NULL) 
-					{
-						nextjob = job;
-						if (oldjob == NULL) 
-							break;
-					}
-					// override if find preloaded segments
-					if (job->segA->id == oldjob->segA->id || 
-						job->segB->id == oldjob->segB->id ) 
-					{
-						nextjob = job;
-						break;
-					}
-				}
-			}		
-			if (nextjob != NULL) nextjob->status = running;
-			return nextjob;
-		}
-
-		// TODO: Is this a potential race-condition problem with Next...() 
-		void SetStatus(JobPtr job, JobStatus status)
-		{
-			boost::mutex::scoped_lock lock(mtx);
-			job->status = status;
-		}
-	};
-	typedef boost::shared_ptr<JobManager> JobManagerPtr;
-
-
-	class Worker
-	{    		
-		uint32_t id;
-		JobPtr oldjob;
-		JobManagerPtr jobman;
-		fs::path outpath;
-
-		void Log(std::string msg)
-		{
-			boost::mutex::scoped_lock lock(mtx_cout);
-			//if (id!=0) return;
-			std::cout 
-				<< "Worker " 
-				<< id << ":"
-				//<< " [" << boost::this_thread::get_id() << "] " 
-				<< " \t" << msg << std::endl;
-		}
-
-	public:
-		Worker(uint32_t id, JobManagerPtr jobman, fs::path prefix) : id(id), jobman(jobman), outpath(prefix), oldjob((Job*)NULL)
-		{
-			std::stringstream ss; 
-			ss << "." << id;
-			outpath.replace_extension(ss.str());
-		}
-
-		void operator()()
-		{   
-			// open the output file
-			fs::ofstream outfile(outpath, std::ios::out | std::ios::app); //|std::ios::binary);
-			bool keepProcessing = true;
-
-			while(keepProcessing)  
-			{  
-				try  
-				{  
-					JobPtr job = jobman->NextPreferredJob(oldjob);
-
-					if (job == NULL) 
-					{
-						//Log("Job - - -");
-						keepProcessing = false;
-					}
-					else
-					{
-						// some info for debug
-						{
-							if (oldjob==NULL)
-								Log(job->ToString() + " \t[null]");
-							else if (job->segA->id==oldjob->segA->id || job->segB->id==oldjob->segB->id)
-								Log(job->ToString() + " \t[cached]");
-							else
-								Log(job->ToString() + " \t[new]");
-						}
-						// do the work
-						boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->num * job->segB->num / 1000 + gRand.Uni(1000)));
-
-						for (uint32_t iA=0; iA<job->segA->num; iA++)
-						for (uint32_t iB=0; iB<job->segB->num; iB++)
-						{
-							Object a = job->segA->obj[iA];
-							Object b = job->segB->obj[iB];
-
-							// math
-							if (a.id == b.id)
-							{
-								outfile << a.id << " " << b.id << std::endl;
-							}
-						}
-
-						// done
-						jobman->SetStatus(job,finished);
-
-						// saved what's loaded on the "gpu" now
-						oldjob = job;
-					}
-				}  
-				// Catch specific exceptions first 
-
-				// Catch general so it doesn't go unnoticed
-				catch (std::exception& exc)  
-				{  
-					Log("Uncaught exception: " + std::string(exc.what()));  
-				}  
-			}  
-		}
-	};
 
 	struct FileDesc
 	{
@@ -537,8 +279,8 @@ namespace xmatch
 			std::swap(pmt.fileA, pmt.fileB);
 		}
 		if (pmt.verbose>1) 
-			std::cout << " -2- # of objects for RAM: " << pmt.fileA.size / sizeof(Object) << std::endl
-					  << " -2- # of objects for FIL: " << pmt.fileB.size / sizeof(Object) << std::endl;		
+			std::cout << " -2- # of objects for RAM: " << pmt.fileA.size / sizeof(Obj) << std::endl
+					  << " -2- # of objects for FIL: " << pmt.fileB.size / sizeof(Obj) << std::endl;		
 
 		//
 		// load segments from small file
@@ -547,7 +289,7 @@ namespace xmatch
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
-			uint64_t len = pmt.fileA.size / sizeof(Object);
+			uint64_t len = pmt.fileA.size / sizeof(Obj);
 			uint32_t sid = 0;
 			// load segments
 			while (len > 0)
@@ -555,7 +297,7 @@ namespace xmatch
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
 				if (pmt.verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
-				file.read( (char*)s->obj, s->num * sizeof(Object));
+				file.read( (char*)s->mObj, s->mNum * sizeof(Obj));
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
@@ -574,7 +316,7 @@ namespace xmatch
 		// loop on larger file
 		//
 		fs::ifstream file(pmt.fileB.path, std::ios::in | std::ios::binary);
-		uint64_t len = pmt.fileB.size / sizeof(Object);
+		uint64_t len = pmt.fileB.size / sizeof(Obj);
 		uint32_t wid = 0;
 		uint32_t sid = 0;
 		while (len > 0)
@@ -586,7 +328,7 @@ namespace xmatch
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
 				if (pmt.verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
-				file.read( (char*)s->obj, s->num * sizeof(Object));
+				file.read( (char*)s->mObj, s->mNum * sizeof(Obj));
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}

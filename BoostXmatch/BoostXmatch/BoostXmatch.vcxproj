@@ -147,9 +147,25 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BoostXmatch.cpp" />
+    <ClCompile Include="Job.cpp" />
+    <ClCompile Include="JobManager.cpp" />
+    <ClCompile Include="SegmentManager.cpp" />
+    <ClCompile Include="Sorter.cpp" />
+    <ClCompile Include="Worker.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="BoostXmatch.cu" />
+    <CudaCompile Include="BoostXmatch.cu.bak" />
+    <CudaCompile Include="Obj.cu" />
+    <CudaCompile Include="Segment.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Job.h" />
+    <ClInclude Include="JobManager.h" />
+    <ClInclude Include="Obj.h" />
+    <ClInclude Include="Segment.h" />
+    <ClInclude Include="SegmentManager.h" />
+    <ClInclude Include="Sorter.h" />
+    <ClInclude Include="Worker.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
