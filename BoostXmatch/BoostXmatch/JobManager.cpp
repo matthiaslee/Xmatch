@@ -29,8 +29,7 @@ namespace xmatch
 						break;
 				}
 				// override if find preloaded segments
-				if (job->segA->mId == oldjob->segA->mId || 
-					job->segB->mId == oldjob->segB->mId ) 
+				if (job->ShareSegment(*oldjob))
 				{
 					nextjob = job;
 					break;

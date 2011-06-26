@@ -50,7 +50,7 @@ namespace xmatch
 					{
 						if (oldjob==NULL)
 							Log(job->ToString() + " \t[null]");
-						else if (job->segA->mId==oldjob->segA->mId || job->segB->mId==oldjob->segB->mId)
+						else if (job->ShareSegment(*oldjob))
 							Log(job->ToString() + " \t[cached]");
 						else
 							Log(job->ToString() + " \t[new]");

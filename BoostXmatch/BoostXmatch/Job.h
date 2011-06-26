@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: $
- *   Revision:    $Rev: $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #pragma once
 #ifndef JOB_H
@@ -23,6 +23,8 @@ namespace xmatch
 		bool swap;
 
 		Job(SegmentPtr a, SegmentPtr b, bool swap) : segA(a), segB(b), swap(swap), status(PENDING) { }
+
+		uint32_t ShareSegment(const Job &rJob);
 
 		std::string ToString() const;
 

@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: $
- *   Revision:    $Rev: $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #pragma once
 #ifndef SEGMENT_H
