@@ -58,18 +58,8 @@ namespace xmatch
 					// do the work
 					//boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->mNum * job->segB->mNum / 1000 + gRand.Uni(1000)));
 
-					for (uint32_t iA=0; iA<job->segA->mNum; iA++)
-					for (uint32_t iB=0; iB<job->segB->mNum; iB++)
-					{
-						Obj a = job->segA->mObj[iA];
-						Obj b = job->segB->mObj[iB];
-
-						// math
-						if (a.mId == b.mId)
-						{
-							outfile << a.mId << " " << b.mId << std::endl;
-						}
-					}
+					Segment *sB = job->segB.get();
+					job->segA->Work(*sB);
 
 					// done
 					jobman->SetStatus(job,FINISHED);

@@ -164,8 +164,9 @@ namespace xmatch
 
 	struct Parameter
 	{
-		uint32_t num_threads, num_obj, verbose;
-		double zh_arcsec, sr_arcsec;
+		uint32_t num_threads, num_obj, verbose, n_zones, nz;
+		double zh_arcsec, zh_deg;
+		double sr_arcsec, sr_deg, sr_rad, sr_dist2;
 		FileDesc fileA, fileB;
 		fs::path outpath;
 		int error;
@@ -240,6 +241,19 @@ namespace xmatch
 				return;
 			}
 			outpath = ofile;
+
+			// derivatives
+			zh_deg = zh_arcsec / 3600;
+			sr_deg = sr_arcsec / 3600;
+			sr_rad = sr_deg / RAD2DEG;
+			sr_dist2 = 2.0 * sin( sr_deg / 2.0 / RAD2DEG );
+			sr_dist2 *= sr_dist2;
+			// number of zones
+			n_zones = (int) ceil(180/zh_deg);
+			std::cerr << "[dbg] Nzns: " << n_zones << std::endl;
+			nz = (int) ceil (sr_arcsec / zh_arcsec);
+			std::cerr << "[dbg] dZns: " << nz << std::endl;
+
 		}
 		
 		friend std::ostream& operator<< (std::ostream& out, const Parameter& p) 
@@ -309,7 +323,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman));
+					sorters.create_thread(Sorter(it, segman, pmt.zh_deg));
 				sorters.join_all();
 			}
 		}
@@ -341,7 +355,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman));
+					sorters.create_thread(Sorter(it, segman, pmt.zh_deg));
 				sorters.join_all();
 			}
 

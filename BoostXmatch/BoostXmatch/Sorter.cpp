@@ -2,7 +2,7 @@
 
 namespace xmatch
 {
-	void Sorter::Log(std::string msg)
+	void Sorter::Log(std::string msg) const
 	{
 		// boost::mutex::scoped_lock lock(mtx_cout);
 		//if (id!=0) return;
@@ -32,8 +32,7 @@ namespace xmatch
 				{
 					// do the work
 					Log(seg->ToString());
-					//boost::this_thread::sleep(boost::posix_time::milliseconds(gRand.Uni(1000)));
-					seg->mSorted = true;
+					seg->Sort(degZoneHeight);
 				}
 			}  
 			// Catch specific exceptions first 
@@ -45,4 +44,7 @@ namespace xmatch
 			}  
 		}  
 	}
+
+
+
 }
