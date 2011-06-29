@@ -242,6 +242,7 @@ namespace xmatch
 			}
 			outpath = ofile;
 
+			/*
 			// derivatives
 			zh_deg = zh_arcsec / 3600;
 			sr_deg = sr_arcsec / 3600;
@@ -253,6 +254,7 @@ namespace xmatch
 			std::cerr << "[dbg] Nzns: " << n_zones << std::endl;
 			nz = (int) ceil (sr_arcsec / zh_arcsec);
 			std::cerr << "[dbg] dZns: " << nz << std::endl;
+			*/
 
 		}
 		
@@ -323,7 +325,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman, pmt.zh_deg));
+					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec));
 				sorters.join_all();
 			}
 		}
@@ -355,14 +357,14 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman, pmt.zh_deg));
+					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec));
 				sorters.join_all();
 			}
 
 			if (pmt.verbose>1) std::cout << " -2- Processing jobs" << std::endl;
 			// process jobs
 			{
-				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap));
+				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap,pmt.sr_arcsec));
 				boost::thread_group workers;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
 					workers.create_thread(Worker(wid++, jobman, pmt.outpath));

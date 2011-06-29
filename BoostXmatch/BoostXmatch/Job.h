@@ -6,10 +6,11 @@
 #ifndef JOB_H
 #define JOB_H
 
+#include "Segment.h"
+
 #include <cstdint>
 #include <iostream>
 
-#include "Segment.h"
 
 namespace xmatch
 {
@@ -21,13 +22,11 @@ namespace xmatch
 		JobStatus status;
 		SegmentPtr segA, segB;
 		bool swap;
+		double sr_deg;
 
-		Job(SegmentPtr a, SegmentPtr b, bool swap) : segA(a), segB(b), swap(swap), status(PENDING) { }
-
+		Job(SegmentPtr a, SegmentPtr b, bool swap, double sr_deg) : segA(a), segB(b), swap(swap), sr_deg(sr_deg), status(PENDING) { }
 		uint32_t ShareSegment(const Job &rJob);
-
 		std::string ToString() const;
-
 		friend std::ostream& operator<< (std::ostream &rOs, const Job &rJob);
 	};
 

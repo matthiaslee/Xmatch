@@ -20,7 +20,7 @@ namespace xmatch
 		Obj();
 		Obj(int64_t id, double ra, double dec);
 
-		int GetZoneId(double height) const;
+		static int32_t GetZoneId(double dec_deg, double height);
 
 		friend std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
 	};

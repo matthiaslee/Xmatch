@@ -5,13 +5,13 @@
 #pragma once
 #ifndef JOBMANAGER_H
 #define JOBMANAGER_H
+#include "Segment.h"
+#include "Job.h"
 
 #include <cstdint>
 #include <iostream>
 
 #include <boost/thread/mutex.hpp>
-#include "Segment.h"
-#include "Job.h"
 
 namespace xmatch
 {	
@@ -21,7 +21,7 @@ namespace xmatch
 		JobVec jobs;
 
 	public:
-		JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap);
+		JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap, double sr_arcsec);
 
 		//	Prefers jobs with segments that the worker already holds
 		JobPtr NextPreferredJob(JobPtr oldjob);

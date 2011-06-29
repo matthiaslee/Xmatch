@@ -32,6 +32,7 @@ namespace xmatch
 	}
 
 	// functor for sorting objects
+	__host__ __device__
 	struct less_zonera
 	{
 		double h;
@@ -40,10 +41,10 @@ namespace xmatch
 		less_zonera(double height) : h(height) {}
 
 		__host__ __device__ 
-		bool operator()(Obj lhs, Obj rhs) const
+		bool operator()(const Obj& lhs, const Obj& rhs) const
 		{
-			int lz = lhs.GetZoneId(h);
-			int rz = rhs.GetZoneId(h);
+			int lz = Obj::GetZoneId(lhs.mDec, h);
+			int rz = Obj::GetZoneId(rhs.mDec, h);
 			if (lz < rz) return true;
 			if (lz > rz) return false;
 			return lhs.mRa < rhs.mRa;
@@ -53,20 +54,21 @@ namespace xmatch
 	struct get_id
 	{
 		__host__ __device__
-		int64_t operator()(Obj o) const { return o.mId; }
+		int64_t operator()(const Obj& o) const { return o.mId; }
 	};
 
 	// functor for splitting object list
 	struct get_radec_radian
 	{
 		__host__ __device__
-		double2 operator()(Obj o) const
+		double2 operator()(const Obj& o) const
 		{
 			return make_double2(o.mRa/RAD2DEG, o.mDec/RAD2DEG);
 		}
 	};
 
 	// functor for finding zone boundaries
+	__host__ __device__
 	struct less_zone
 	{
 		double h;
@@ -75,24 +77,24 @@ namespace xmatch
 		less_zone(double height) : h(height) {}
 
 		__host__ __device__ 
-		bool operator()(Obj lhs, Obj rhs) const
+		bool operator()(const Obj& lhs, const Obj& rhs) const
 		{
-			int lz = lhs.GetZoneId(h);
-			int rz = rhs.GetZoneId(h);
+			int lz = Obj::GetZoneId(lhs.mDec,h);
+			int rz = Obj::GetZoneId(rhs.mDec,h);
 			return lz < rz;
 		}
 
 		__host__ __device__ 
-		bool operator()(Obj o, int zone) const
+		bool operator()(const Obj& o, int zone) const
 		{
-			int z = o.GetZoneId(h);
+			int z = Obj::GetZoneId(o.mDec,h);
 			return z < zone;
 		}
 
 		__host__ __device__ 
-		bool operator()(int zone, Obj o) const
+		bool operator()(int zone, const Obj& o) const
 		{
-			int z = o.GetZoneId(h);
+			int z = Obj::GetZoneId(o.mDec,h);
 			return zone < z;
 		}
 
@@ -112,8 +114,9 @@ namespace xmatch
 	}
 
 
-	void Segment::Sort(double zh_deg)
+	void Segment::Sort(double zh_arcsec)
 	{
+		zh_deg = zh_arcsec / 3600;
 		clock_t clk_start, clk_stop;
 
 		thrust::device_vector<Obj> dObj(hObj.size());
@@ -181,7 +184,7 @@ namespace xmatch
 		}
 	}
 
-	void Segment::Work(Segment const &rSegment) const
+	void Segment::Match(Segment const &rSegment, double sr_arcsec) const
 	{
 	}
 

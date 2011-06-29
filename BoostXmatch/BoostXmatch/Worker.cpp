@@ -59,7 +59,7 @@ namespace xmatch
 					//boost::this_thread::sleep(boost::posix_time::milliseconds(job->segA->mNum * job->segB->mNum / 1000 + gRand.Uni(1000)));
 
 					Segment *sB = job->segB.get();
-					job->segA->Work(*sB);
+					job->segA->Match(*sB, job->sr_deg);
 
 					// done
 					jobman->SetStatus(job,FINISHED);
