@@ -30,21 +30,27 @@ namespace xmatch
 			rIs.read( (char*)o, mNum * sizeof(Obj));
 		}
 	}
+	
+	std::ostream& operator<<(std::ostream &o, const Segment &s)
+	{
+		o << s.mId;
+		return o;
+	}
+
 
 	// functor for sorting objects
-	__host__ __device__
 	struct less_zonera
 	{
 		double h;
 
-		__host__ __device__
+		__host__ __device__ 
 		less_zonera(double height) : h(height) {}
 
 		__host__ __device__ 
 		bool operator()(const Obj& lhs, const Obj& rhs) const
 		{
-			int lz = Obj::GetZoneId(lhs.mDec, h);
-			int rz = Obj::GetZoneId(rhs.mDec, h);
+			int lz = lhs.GetZoneId(h);
+			int rz = rhs.GetZoneId(h);
 			if (lz < rz) return true;
 			if (lz > rz) return false;
 			return lhs.mRa < rhs.mRa;
@@ -68,7 +74,6 @@ namespace xmatch
 	};
 
 	// functor for finding zone boundaries
-	__host__ __device__
 	struct less_zone
 	{
 		double h;
@@ -79,22 +84,22 @@ namespace xmatch
 		__host__ __device__ 
 		bool operator()(const Obj& lhs, const Obj& rhs) const
 		{
-			int lz = Obj::GetZoneId(lhs.mDec,h);
-			int rz = Obj::GetZoneId(rhs.mDec,h);
+			int lz = lhs.GetZoneId(h);
+			int rz = rhs.GetZoneId(h);
 			return lz < rz;
 		}
 
 		__host__ __device__ 
 		bool operator()(const Obj& o, int zone) const
 		{
-			int z = Obj::GetZoneId(o.mDec,h);
+			int z = o.GetZoneId(h);
 			return z < zone;
 		}
 
 		__host__ __device__ 
 		bool operator()(int zone, const Obj& o) const
 		{
-			int z = Obj::GetZoneId(o.mDec,h);
+			int z = o.GetZoneId(h);
 			return zone < z;
 		}
 
@@ -186,23 +191,7 @@ namespace xmatch
 
 	void Segment::Match(Segment const &rSegment, double sr_arcsec) const
 	{
+		// boost::this_thread::sleep(boost::posix_time::milliseconds(mNum * rSegment.mNum / 1000));
 	}
 
-	std::string Segment::ToString(const std::string sep) const
-	{
-		std::stringstream ss;
-		ss << mId; // << sep << sorted;
-		return ss.str();
-	}
-	
-	std::string Segment::ToString() const
-	{
-		return ToString(std::string(":"));
-	}
-
-	std::ostream& operator<<(std::ostream &o, const Segment &s)
-	{
-		o << s.ToString();
-		return o;
-	}
 }

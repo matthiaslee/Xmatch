@@ -5,7 +5,6 @@
 #pragma once
 #ifndef JOB_H
 #define JOB_H
-
 #include "Segment.h"
 
 #include <cstdint>
@@ -26,7 +25,6 @@ namespace xmatch
 
 		Job(SegmentPtr a, SegmentPtr b, bool swap, double sr_deg) : segA(a), segB(b), swap(swap), sr_deg(sr_deg), status(PENDING) { }
 		uint32_t ShareSegment(const Job &rJob);
-		std::string ToString() const;
 		friend std::ostream& operator<< (std::ostream &rOs, const Job &rJob);
 	};
 

@@ -32,14 +32,11 @@ namespace xmatch
 		uint32_t mId;
 		uint64_t mNum;
 
-		Segment(uint32_t id, uint64_t num) : mId(id), mNum(num) { std::cout << hId.size() << " <= " << hId.capacity() << std::endl; };
+		Segment(uint32_t id, uint64_t num) : mId(id), mNum(num) { };
 
 		void Load(std::istream &rIs);
-		void Sort(double zh_deg);
+		void Sort(double zh_arcsec);
 		void Match(const Segment &rSegment, double sr_arcsec) const;
-
-		std::string ToString(std::string sep) const;	
-		std::string ToString(void) const;
 
 		friend std::ostream& operator<< (std::ostream &rOs, const Segment &rSegment);
 	};

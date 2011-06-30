@@ -57,6 +57,7 @@ namespace po = boost::program_options;
 #define RAD2DEG 57.295779513082323
 #define THREADS_PER_BLOCK 512
 
+
 /*
 __host__ __device__ func()
 {
@@ -69,10 +70,9 @@ __host__ __device__ func()
 #endif
 }*/
 
+
 namespace xmatch
 {
-	boost::mutex mtx_cout; // for std::cout dumps
-
 	// dump a vector by elements
 	template<class T>
 	std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)

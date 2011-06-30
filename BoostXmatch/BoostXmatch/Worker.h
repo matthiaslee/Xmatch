@@ -5,12 +5,12 @@
 #pragma once
 #ifndef WORKER_H
 #define WORKER_H
+#include "JobManager.h"
 
 #include <cstdint>
 #include <iostream>
 
 #include <boost/filesystem.hpp>
-#include "JobManager.h"
 
 namespace xmatch
 {	
@@ -20,8 +20,6 @@ namespace xmatch
 		JobPtr oldjob;
 		JobManagerPtr jobman;
 		boost::filesystem::path outpath;
-
-		void Log(std::string msg);
 
 	public:
 		Worker(uint32_t id, JobManagerPtr jobman, boost::filesystem::path prefix);

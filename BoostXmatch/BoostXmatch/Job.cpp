@@ -1,15 +1,7 @@
 #include "Job.h"
-#include <sstream>
 
 namespace xmatch
 {
-	std::string Job::ToString() const
-	{
-		std::stringstream ss;
-		ss << "Job " << segA->mId << "x" << segB->mId; // << ":" << status; 
-		return ss.str();
-	}
-
 	uint32_t Job::ShareSegment(const Job &rJob)
 	{
 		int n = 0;
@@ -20,7 +12,7 @@ namespace xmatch
 
 	std::ostream& operator<<(std::ostream &rOs, const Job &rJob)
 	{
-		rOs << rJob.ToString();
+		rOs << "Job " << rJob.segA->mId << "x" << rJob.segB->mId; 
 		return rOs;
 	}
 }

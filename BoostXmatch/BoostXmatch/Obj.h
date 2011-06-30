@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <math.h>
 
 namespace xmatch
 {
@@ -17,12 +18,23 @@ namespace xmatch
 		int64_t mId;
 		double mRa, mDec;
 
-		Obj();
-		Obj(int64_t id, double ra, double dec);
+#ifdef __CUDACC__
+		__host__ __device__
+#endif	
+		Obj() : mId(-1), mRa(99), mDec(99) { }
 
-		static int32_t GetZoneId(double dec_deg, double height);
+#ifdef __CUDACC__
+		__host__ __device__
+#endif	
+		Obj(int64_t id, double ra, double dec) : mId(id), mRa(ra), mDec(dec) { }
 
-		friend std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
+#ifdef __CUDACC__
+		__host__ __device__
+#endif	
+		int32_t GetZoneId(double height) const { return (int32_t) floor( (mDec + 90) / height ); }
+
+		friend 
+		std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
 	};
 }
 #endif /* OBJ_H */

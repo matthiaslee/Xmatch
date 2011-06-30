@@ -17,6 +17,9 @@
     <ClCompile Include="Sorter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Obj.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="JobManager.h">
@@ -43,9 +46,6 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Segment.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="Obj.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

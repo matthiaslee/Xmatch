@@ -154,7 +154,9 @@
     <ClCompile Include="Worker.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="Obj.cu" />
+    <ClCompile Include="Obj.cpp">
+      <FileType>Document</FileType>
+    </ClCompile>
     <CudaCompile Include="Segment.cu" />
   </ItemGroup>
   <ItemGroup>
