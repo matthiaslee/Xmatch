@@ -104,6 +104,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>c:\tamas\projects\boost-trunk\stage\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>$(CUDA_LIB_PATH)\cudart.lib;$(CUDA_LIB_PATH)\cuda.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ShowProgress>NotSet</ShowProgress>
     </Link>
     <CudaCompile>
       <CodeGeneration>compute_20,sm_20</CodeGeneration>
@@ -146,20 +147,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BoostXmatch.cpp" />
+    <ClCompile Include="BoostXmatch.cpp">
+      <FileType>Document</FileType>
+    </ClCompile>
+    <ClCompile Include="Hello.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <CudaCompile Include="CuXmatch.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
+    <CudaCompile Include="Hello.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
     <ClCompile Include="Job.cpp" />
     <ClCompile Include="JobManager.cpp" />
     <ClCompile Include="SegmentManager.cpp" />
-    <ClCompile Include="Sorter.cpp" />
-    <ClCompile Include="Worker.cpp" />
+    <CudaCompile Include="Sorter.cu" />
+    <CudaCompile Include="Worker.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Obj.cpp">
       <FileType>Document</FileType>
     </ClCompile>
-    <CudaCompile Include="Segment.cu" />
+    <ClCompile Include="Segment.cpp">
+      <FileType>Document</FileType>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Hello.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Job.h" />
     <ClInclude Include="JobManager.h" />
     <ClInclude Include="Obj.h" />

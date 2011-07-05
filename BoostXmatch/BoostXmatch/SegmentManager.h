@@ -5,13 +5,14 @@
 #pragma once
 #ifndef SEGMENTMANAGER_H
 #define SEGMENTMANAGER_H
-
-#include <cstdint>
-#include <iostream>
-
-#include <boost/thread/mutex.hpp>
-
 #include "Segment.h"
+
+
+#pragma warning(push)
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
+#include <boost/thread/mutex.hpp>
+#pragma warning(pop)
+
 
 namespace xmatch
 {

@@ -7,36 +7,36 @@
 #define SEGMENT_H
 #include "Obj.h"
 
-#include <cstdint>
-#include <string>
 #include <vector>
-#include <iostream>
+#include <cuda_runtime.h>  // double2
 
+#pragma warning(push)
+#pragma warning(disable: 4996)      // Thrust's use of strerror
+//#pragma warning(disable: 4251)      // STL class exports
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/shared_ptr.hpp>
-#include <thrust/host_vector.h>
+#include "thrust/host_vector.h"
+#pragma warning(pop)
 
 
 namespace xmatch
 {
 	class Segment
 	{
-		// main() reads here but clear()-ed later
-		thrust::host_vector<Obj> hObj; 
-		// pre-sorted data for processing
-		thrust::host_vector<int64_t> hId;
-		thrust::host_vector<double2> hRaDec;
-		thrust::host_vector<int> hZoneBegin, hZoneEnd;
-		double zh_deg;
-
 	public:
 		uint32_t mId;
-		uint64_t mNum;
+		uintmax_t mNum;
+		double mZoneHeightDegree;
 
-		Segment(uint32_t id, uint64_t num) : mId(id), mNum(num) { };
+		// main() reads here but clear()-ed later
+		thrust::host_vector<Obj> vObj; 
+		// pre-sorted data for processing
+		thrust::host_vector<int64_t> vId;
+		thrust::host_vector<double2> vRadec;
+		thrust::host_vector<int> vZoneBegin, vZoneEnd;
 
+		Segment(uint32_t id, uintmax_t num); 
 		void Load(std::istream &rIs);
-		void Sort(double zh_arcsec);
-		void Match(const Segment &rSegment, double sr_arcsec) const;
 
 		friend std::ostream& operator<< (std::ostream &rOs, const Segment &rSegment);
 	};

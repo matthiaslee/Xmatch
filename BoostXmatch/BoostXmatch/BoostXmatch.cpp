@@ -26,16 +26,12 @@ THE SOFTWARE.
 */
 /* MIT license http://www.opensource.org/licenses/mit-license.php */
 
-
 #include <iostream>
 #include <string>
-#include <list>
-
-#include <math.h>
+  
 
 #include "Sorter.h"
-#include "Worker.h"
-
+//#include "Worker.h"
 
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
@@ -54,92 +50,19 @@ typedef boost::minstd_rand base_generator_type;
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-#define RAD2DEG 57.295779513082323
-#define THREADS_PER_BLOCK 512
-
-
-/*
-__host__ __device__ func()
-{
-#if __CUDA_ARCH__ == 100
-    // Device code path for compute capability 1.0
-#elif __CUDA_ARCH__ == 200
-    // Device code path for compute capability 2.0
-#elif !defined(__CUDA_ARCH__)
-    // Host code path
-#endif
-}*/
 
 
 namespace xmatch
 {
 	// dump a vector by elements
 	template<class T>
-	std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
+	std::ostream& operator<< (std::ostream& os, const std::vector<T>& v)
 	{
 		copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout," ")); 
 		return os;
 	};
 
-/* DOES NOT WORK ON LINUX *
 
-	// Calls the provided work function and returns the number of milliseconds 
-	// that it takes to call that function.
-	template <class Function>
-	int64_t time_call(Function&& f)
-	{
-	   int64_t begin = GetTickCount();
-	   f();
-	   return GetTickCount() - begin;
-	}
-*/
-
-
-	class Random
-	{
-		base_generator_type *generator;
-		boost::mutex mtx;
-
-	public:
-		Random(const uint32_t &seed)
-		{
-			generator = new base_generator_type(seed);
-		}
-
-		~Random()
-		{
-			if (generator != NULL)
-			{
-				delete generator;
-				generator = NULL;
-			}
-		}
-
-		int Uni(int max)
-		{
-			boost::mutex::scoped_lock lock(mtx);
-			boost::uniform_int<> uni_dist(0,max);
-			boost::variate_generator<base_generator_type&, boost::uniform_int<> > uni(*generator, uni_dist);		
-			return uni();
-		}
-	};
-	Random gRand(42u);
-
-	/*
-	struct Cartesian
-	{
-		double x, y, z;
-		Cartesian() : x(0), y(0), z(0) {}
-		Cartesian(double x, double y, double z) : x(x), y(y), z(z) {}
-
-		friend std::ostream& operator<< (std::ostream& out, const Cartesian& o) 
-		{
-			out << o.x << " " << o.y << " " << o.z;
-			return out;
-		}
-	};
-	*/
-	
 
 	struct FileDesc
 	{
@@ -328,8 +251,12 @@ namespace xmatch
 					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec));
 				sorters.join_all();
 			}
+
+			for (uint32_t it=0; it<segmentsRam.size(); it++) 
+				std::cout << segmentsRam[it]->vId[0] << std::endl;
 		}
 
+#ifdef DO_JOB
 		// 
 		// loop on larger file
 		//
@@ -371,6 +298,7 @@ namespace xmatch
 				workers.join_all();
 			}
 		}
+#endif
 		return 0;
 	}
 

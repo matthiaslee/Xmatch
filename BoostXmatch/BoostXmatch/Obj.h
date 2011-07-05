@@ -8,33 +8,28 @@
 
 #include <cstdint>
 #include <iostream>
-#include <math.h>
 
 namespace xmatch
 {
-	class Obj
+	struct dbl2 { double x, y; };
+
+	struct Obj
 	{
-	public:
 		int64_t mId;
 		double mRa, mDec;
 
-#ifdef __CUDACC__
-		__host__ __device__
-#endif	
-		Obj() : mId(-1), mRa(99), mDec(99) { }
+#ifdef NOT_HERE
+		__device__ __host__
+		Obj() : mId(0), mRa(0), mDec(0) { }
 
-#ifdef __CUDACC__
-		__host__ __device__
-#endif	
-		Obj(int64_t id, double ra, double dec) : mId(id), mRa(ra), mDec(dec) { }
+		__device__ __host__
+		Obj(int64_t id, double ra, double dec) : mId(id), mRa(ra), mDec(dec) { } 
 
-#ifdef __CUDACC__
-		__host__ __device__
-#endif	
-		int32_t GetZoneId(double height) const { return (int32_t) floor( (mDec + 90) / height ); }
-
-		friend 
-		std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
+		__device__ __host__
+		Obj(const Obj& o) : mId(o.mId), mRa(o.mRa), mDec(o.mDec) { }
+#endif
 	};
+
+	std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
 }
 #endif /* OBJ_H */

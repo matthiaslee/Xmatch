@@ -5,13 +5,13 @@
 #pragma once
 #ifndef JOBMANAGER_H
 #define JOBMANAGER_H
-#include "Segment.h"
 #include "Job.h"
 
-#include <cstdint>
-#include <iostream>
-
+#pragma warning(push)
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/thread/mutex.hpp>
+#pragma warning(pop)
+
 
 namespace xmatch
 {	
