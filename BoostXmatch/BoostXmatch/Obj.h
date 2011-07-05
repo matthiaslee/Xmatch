@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <iostream>
 
+#define RAD2DEG 57.295779513082323
+
 namespace xmatch
 {
 	struct dbl2 { double x, y; };

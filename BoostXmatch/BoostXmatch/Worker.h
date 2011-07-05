@@ -17,7 +17,7 @@ namespace xmatch
 		std::string outpath;
 
 	public:
-		Worker(uint32_t id, JobManagerPtr jobman, std::string prefix);
+		Worker(uint32_t id, JobManagerPtr jobman, std::string outpath) : id(id), jobman(jobman), outpath(outpath), oldjob((Job*)NULL) {	}
 		void operator()();		
 	};
 }

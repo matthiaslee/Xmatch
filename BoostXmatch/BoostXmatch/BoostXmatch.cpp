@@ -28,28 +28,26 @@ THE SOFTWARE.
 
 #include <iostream>
 #include <string>
-  
+#include <sstream>
 
 #include "Sorter.h"
-//#include "Worker.h"
+#include "Worker.h"
 
+#pragma warning(push)
+//#pragma warning(disable: 4996)      // Thrust's use of strerror
+//#pragma warning(disable: 4251)      // STL class exports
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/date_time.hpp>  
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
+#pragma warning(pop)
 
-#include <boost/random/linear_congruential.hpp>
-#include <boost/random/uniform_int.hpp>
-//#include <boost/random/uniform_real.hpp>
-#include <boost/random/variate_generator.hpp>
-// This is a typedef for a random number generator; try boost::mt19937 or boost::ecuyer1988 instead of boost::minstd_rand
-typedef boost::minstd_rand base_generator_type;
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
-
 
 
 namespace xmatch
@@ -61,8 +59,6 @@ namespace xmatch
 		copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout," ")); 
 		return os;
 	};
-
-
 
 	struct FileDesc
 	{
@@ -83,7 +79,6 @@ namespace xmatch
 			return out;
 		}
 	};
-
 
 	struct Parameter
 	{
@@ -164,21 +159,6 @@ namespace xmatch
 				return;
 			}
 			outpath = ofile;
-
-			/*
-			// derivatives
-			zh_deg = zh_arcsec / 3600;
-			sr_deg = sr_arcsec / 3600;
-			sr_rad = sr_deg / RAD2DEG;
-			sr_dist2 = 2.0 * sin( sr_deg / 2.0 / RAD2DEG );
-			sr_dist2 *= sr_dist2;
-			// number of zones
-			n_zones = (int) ceil(180/zh_deg);
-			std::cerr << "[dbg] Nzns: " << n_zones << std::endl;
-			nz = (int) ceil (sr_arcsec / zh_arcsec);
-			std::cerr << "[dbg] dZns: " << nz << std::endl;
-			*/
-
 		}
 		
 		friend std::ostream& operator<< (std::ostream& out, const Parameter& p) 
@@ -248,7 +228,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec));
+					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec/3600));
 				sorters.join_all();
 			}
 
@@ -256,14 +236,13 @@ namespace xmatch
 				std::cout << segmentsRam[it]->vId[0] << std::endl;
 		}
 
-#ifdef DO_JOB
 		// 
 		// loop on larger file
 		//
 		fs::ifstream file(pmt.fileB.path, std::ios::in | std::ios::binary);
 		uint64_t len = pmt.fileB.size / sizeof(Obj);
-		uint32_t wid = 0;
 		uint32_t sid = 0;
+		uint32_t wid = 0;
 		while (len > 0)
 		{
 			SegmentVec segmentsFile;
@@ -284,21 +263,25 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec));
+					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec/3600));
 				sorters.join_all();
 			}
 
 			if (pmt.verbose>1) std::cout << " -2- Processing jobs" << std::endl;
 			// process jobs
 			{
-				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap,pmt.sr_arcsec));
+				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap,pmt.sr_arcsec/3600));
 				boost::thread_group workers;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					workers.create_thread(Worker(wid++, jobman, pmt.outpath));
+				{
+					std::ostringstream oss;	     
+					oss << "." << wid++;
+					Worker w = Worker(it, jobman, pmt.outpath.string() + oss.str());
+					workers.create_thread(w);
+				}
 				workers.join_all();
 			}
 		}
-#endif
 		return 0;
 	}
 

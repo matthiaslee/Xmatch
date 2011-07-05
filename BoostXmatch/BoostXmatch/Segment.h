@@ -8,7 +8,6 @@
 #include "Obj.h"
 
 #include <vector>
-#include <cuda_runtime.h>  // double2
 
 #pragma warning(push)
 #pragma warning(disable: 4996)      // Thrust's use of strerror
@@ -32,7 +31,7 @@ namespace xmatch
 		thrust::host_vector<Obj> vObj; 
 		// pre-sorted data for processing
 		thrust::host_vector<int64_t> vId;
-		thrust::host_vector<double2> vRadec;
+		thrust::host_vector<dbl2> vRadec;
 		thrust::host_vector<int> vZoneBegin, vZoneEnd;
 
 		Segment(uint32_t id, uintmax_t num); 

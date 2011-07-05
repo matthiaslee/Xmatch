@@ -2,12 +2,12 @@
 
 namespace xmatch
 {
-	JobManager::JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap, double sr_arcsec) 
+	JobManager::JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap, double sr_deg) 
 	{
 		for (SegmentVec::size_type iA=0; iA<segA.size(); iA++)
 		for (SegmentVec::size_type iB=0; iB<segB.size(); iB++)
 		{
-			JobPtr job(new Job(segA[iA],segB[iB],swap,sr_arcsec));
+			JobPtr job(new Job(segA[iA],segB[iB],swap,sr_deg));
 			jobs.push_back(job);
 		}		
 	}
