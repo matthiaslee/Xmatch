@@ -22,17 +22,10 @@
     <ClInclude Include="Obj.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Hello.h">
-      <Filter>Hello</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Sorter.cu">
       <Filter>Source Files</Filter>
-    </CudaCompile>
-    <CudaCompile Include="CuXmatch.cu" />
-    <CudaCompile Include="Hello.cu">
-      <Filter>Hello</Filter>
     </CudaCompile>
     <CudaCompile Include="Worker.cu">
       <Filter>Source Files</Filter>
@@ -45,15 +38,9 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{c41b0ee7-24d2-4e95-8f81-7df05d2a632a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Hello">
-      <UniqueIdentifier>{20546b78-7ac4-499c-9f53-724d702675f4}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BoostXmatch.cpp" />
-    <ClCompile Include="Hello.cpp">
-      <Filter>Hello</Filter>
-    </ClCompile>
     <ClCompile Include="Job.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
