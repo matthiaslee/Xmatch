@@ -1,4 +1,5 @@
 #include "Sorter.h"
+#include "Log.h"
 
 #pragma warning(push)
 //#pragma warning(disable: 4996)      // Thrust's use of strerror
@@ -93,6 +94,7 @@ namespace xmatch
 
 	void Sorter::Sort(SegmentPtr seg) 
 	{
+		xlog_1 << "sorting...";
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
 		thrust::device_vector<int64_t> dId(seg->vObj.size());
 		thrust::device_vector<dbl2> dRadec(seg->vObj.size());
@@ -123,6 +125,7 @@ namespace xmatch
 			seg->vZoneBegin = d_zone_begin;
 			seg->vZoneEnd = d_zone_end;
 		}
+		xlog_1 << "sort ended";
 	}
 
 	void Sorter::operator()()

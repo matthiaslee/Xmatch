@@ -44,11 +44,13 @@ THE SOFTWARE.
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
+//#include <boost/log/trivial.hpp>
 #pragma warning(pop)
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
+boost::mutex mtx_cout;
 
 namespace xmatch
 {

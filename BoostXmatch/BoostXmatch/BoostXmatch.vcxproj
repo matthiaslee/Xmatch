@@ -163,6 +163,7 @@
     </ClCompile>
     <ClCompile Include="Job.cpp" />
     <ClCompile Include="JobManager.cpp" />
+    <ClCompile Include="Log.cpp" />
     <ClCompile Include="SegmentManager.cpp" />
     <CudaCompile Include="Sorter.cu" />
     <CudaCompile Include="Worker.cu" />
@@ -179,6 +180,7 @@
     <ClInclude Include="CudaManager.h" />
     <ClInclude Include="Job.h" />
     <ClInclude Include="JobManager.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="Obj.h" />
     <ClInclude Include="Segment.h" />
     <ClInclude Include="SegmentManager.h" />

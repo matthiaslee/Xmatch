@@ -1,7 +1,14 @@
 
  TODO:
-======
+------
  - Only copy to GPU, if needed
  - RA wraparound
  - Linux make file (CMake?)
  - 
+
+
+Notes:
+------
+To build Boost for x64, do this:
+.\bootstrap.bat
+.\b2 --toolset=msvc-10.0 address-model=64
