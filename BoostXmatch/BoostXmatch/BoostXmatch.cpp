@@ -248,6 +248,7 @@ namespace xmatch
 		uint32_t wid = 0;
 		while (len > 0)
 		{
+			xlog(PROGRESS) << "Loading segments" << std::endl;
 			SegmentVec segmentsFile;
 			// load segments
 			for (uint64_t i=0; i<pmt.num_threads; i++)

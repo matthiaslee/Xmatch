@@ -137,7 +137,7 @@ namespace xmatch
 		try  
 		{
 			cudaError_t err = cuman->SetDevice(this->id);
-			if (err!=cudaSuccess) { xlog(ERROR) << "Cannot set CUDA device on GPU- " << this->id << std::endl; return;	}
+			if (err!=cudaSuccess) { xlog(ERROR) << "Cannot set CUDA device on GPU-" << this->id << std::endl; return;	}
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  
