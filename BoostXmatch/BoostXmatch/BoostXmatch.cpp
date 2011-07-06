@@ -30,6 +30,7 @@ THE SOFTWARE.
 #include <string>
 #include <sstream>
 
+#include "CudaManager.h"
 #include "Sorter.h"
 #include "Worker.h"
 
@@ -44,7 +45,6 @@ THE SOFTWARE.
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
 #pragma warning(pop)
-
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
@@ -82,9 +82,8 @@ namespace xmatch
 
 	struct Parameter
 	{
-		uint32_t num_threads, num_obj, verbose, n_zones, nz;
-		double zh_arcsec, zh_deg;
-		double sr_arcsec, sr_deg, sr_rad, sr_dist2;
+		uint32_t num_threads, num_obj, verbose;
+		double zh_arcsec, sr_arcsec;
 		FileDesc fileA, fileB;
 		fs::path outpath;
 		int error;
@@ -102,7 +101,7 @@ namespace xmatch
 					("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
 					("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 					("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
-					("threads,t", po::value<uint32_t>(&num_threads)->default_value(1), "number of threads")
+					("threads,t", po::value<uint32_t>(&num_threads)->default_value(0), "number of threads, defaults to # of GPUs")
 					("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
 					("verbose,v", po::value<uint32_t>()->implicit_value(1), "enable verbosity (optionally specify level)")
 					("help,h", "print help message")
@@ -187,13 +186,21 @@ namespace xmatch
 		// parse command line
 		Parameter pmt(argc,argv);
 		if (pmt.error) return pmt.error;
+
+		// cuda query
+		CudaManagerPtr cuman(new CudaManager());
+		if (pmt.num_threads<1) 
+			pmt.num_threads = cuman->GetDeviceCount();
+
 		if (pmt.verbose) std::cout << pmt << std::endl;
+		if (pmt.verbose>2)
+			std::cout << " -3- # of GPUs: " << cuman->GetDeviceCount() << std::endl;
 
 		// swap if B is smaller
 		bool swap = false;
 		if (pmt.fileB.size < pmt.fileA.size)
 		{
-			if (pmt.verbose > 1) std::cout << " -2- Swapping order of files" << std::endl;
+			if (pmt.verbose>1) std::cout << " -2- Swapping order of files" << std::endl;
 			swap = true;
 			std::swap(pmt.fileA, pmt.fileB);
 		}
@@ -228,12 +235,9 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec/3600));
+					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600));
 				sorters.join_all();
 			}
-
-			for (uint32_t it=0; it<segmentsRam.size(); it++) 
-				std::cout << segmentsRam[it]->vId[0] << std::endl;
 		}
 
 		// 
@@ -263,7 +267,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(it, segman, pmt.zh_arcsec/3600));
+					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600));
 				sorters.join_all();
 			}
 
@@ -276,7 +280,7 @@ namespace xmatch
 				{
 					std::ostringstream oss;	     
 					oss << "." << wid++;
-					Worker w = Worker(it, jobman, pmt.outpath.string() + oss.str());
+					Worker w = Worker(cuman, it, jobman, pmt.outpath.string() + oss.str());
 					workers.create_thread(w);
 				}
 				workers.join_all();

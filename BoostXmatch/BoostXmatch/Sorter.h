@@ -6,6 +6,7 @@
 #ifndef SORTER_H
 #define SORTER_H
 #include "SegmentManager.h"
+#include "CudaManager.h"
 
 namespace xmatch
 {	
@@ -14,11 +15,12 @@ namespace xmatch
 		uint32_t id;
 		double zh_deg;
 		SegmentManagerPtr segman;
+		CudaManagerPtr cuman;
 
 		void Sort(SegmentPtr seg);
 
 	public:
-		Sorter(uint32_t id, SegmentManagerPtr segman, double zh_deg) : id(id), segman(segman), zh_deg(zh_deg) {}
+		Sorter(CudaManagerPtr cuman, uint32_t id, SegmentManagerPtr segman, double zh_deg) : cuman(cuman), id(id), segman(segman), zh_deg(zh_deg) {}
 		void operator()();
 	};
 }

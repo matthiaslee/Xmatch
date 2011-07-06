@@ -13,9 +13,12 @@ namespace xmatch
 
 	void Segment::Load(std::istream &rIs)
 	{
-		vObj.resize(mNum);
-		Obj *o = thrust::raw_pointer_cast(&vObj[0]);
-		rIs.read( (char*)o, mNum * sizeof(Obj));
+		if (mNum > 0)
+		{
+			vObj.resize(mNum);
+			Obj *o = thrust::raw_pointer_cast(&vObj[0]);
+			rIs.read( (char*)o, mNum * sizeof(Obj));
+		}
 	}
 	
 	std::ostream& operator<< (std::ostream &o, const Segment &s)

@@ -1,9 +1,5 @@
 #include "Sorter.h"
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_runtime_api.h>
-
 #pragma warning(push)
 //#pragma warning(disable: 4996)      // Thrust's use of strerror
 //#pragma warning(disable: 4251)      // STL class exports
@@ -18,7 +14,7 @@
 
 
 namespace xmatch
-{	
+{		
 	__host__ __device__
 	int32_t GetZoneId(double dec, double height)  
 	{ 
@@ -95,7 +91,6 @@ namespace xmatch
 
 	}; 
 
-	
 	void Sorter::Sort(SegmentPtr seg) 
 	{
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
@@ -130,38 +125,11 @@ namespace xmatch
 		}
 	}
 
-#ifdef PRINT_DEVICE_PROPERTIES
-	// Print device properties
-	void printDevProp(cudaDeviceProp devProp)
-	{
-		printf("Major revision number:         %d\n",  devProp.major);
-		printf("Minor revision number:         %d\n",  devProp.minor);
-		printf("Name:                          %s\n",  devProp.name);
-		printf("Total global memory:           %u\n",  devProp.totalGlobalMem);
-		printf("Total shared memory per block: %u\n",  devProp.sharedMemPerBlock);
-		printf("Total registers per block:     %d\n",  devProp.regsPerBlock);
-		printf("Warp size:                     %d\n",  devProp.warpSize);
-		printf("Maximum memory pitch:          %u\n",  devProp.memPitch);
-		printf("Maximum threads per block:     %d\n",  devProp.maxThreadsPerBlock);
-		for (int i = 0; i < 3; ++i)
-		printf("Maximum dimension %d of block:  %d\n", i, devProp.maxThreadsDim[i]);
-		for (int i = 0; i < 3; ++i)
-		printf("Maximum dimension %d of grid:   %d\n", i, devProp.maxGridSize[i]);
-		printf("Clock rate:                    %d\n",  devProp.clockRate);
-		printf("Total constant memory:         %u\n",  devProp.totalConstMem);
-		printf("Texture alignment:             %u\n",  devProp.textureAlignment);
-		printf("Concurrent copy and execution: %s\n",  (devProp.deviceOverlap ? "Yes" : "No"));
-		printf("Number of multiprocessors:     %d\n",  devProp.multiProcessorCount);
-		printf("Kernel execution timeout:      %s\n",  (devProp.kernelExecTimeoutEnabled ? "Yes" : "No"));
-		return;
-	}
-#endif
-
 	void Sorter::operator()()
 	{   
 		try  
 		{
-			cudaError_t err = cudaSetDevice(this->id);
+			cudaError_t err = cuman->SetDevice(this->id);
 			if (err) { std::cerr << "Cannot set CUDA device " << this->id << std::endl; return;	}
 
 			bool   keepProcessing = true;
@@ -179,7 +147,7 @@ namespace xmatch
 		catch (...)  {  std::cerr << "Unknown error!" << std::endl;	}  
 		// reset device
 		{
-			cudaError_t err = cudaDeviceReset(); // cudaThreadExit() is now deprecated
+			cudaError_t err = cuman->Reset(); 
 			if (err) std::cerr << "Cannot reset CUDA device " << this->id << std::endl;					
 		}
 	} // operator()

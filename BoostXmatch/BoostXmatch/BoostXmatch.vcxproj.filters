@@ -22,6 +22,9 @@
     <ClInclude Include="Obj.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CudaManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Sorter.cu">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="JobManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CudaManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

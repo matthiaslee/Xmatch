@@ -158,6 +158,9 @@
     <ClCompile Include="BoostXmatch.cpp">
       <FileType>Document</FileType>
     </ClCompile>
+    <ClCompile Include="CudaManager.cpp">
+      <FileType>CppCode</FileType>
+    </ClCompile>
     <ClCompile Include="Job.cpp" />
     <ClCompile Include="JobManager.cpp" />
     <ClCompile Include="SegmentManager.cpp" />
@@ -173,6 +176,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CudaManager.h" />
     <ClInclude Include="Job.h" />
     <ClInclude Include="JobManager.h" />
     <ClInclude Include="Obj.h" />
