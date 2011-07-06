@@ -13,9 +13,13 @@ namespace xmatch
 	// global mutex
 	extern boost::mutex mtx_log;
 
-	std::ostream& Log::Get(int level) 
+	std::ostream& Log::Get(LogLevel level) 
 	{
-		this->buffer << boost::this_thread::get_id() << "  " << boost::posix_time::second_clock().local_time() << "  <" << level << ">  ";
+		this->buffer 
+			<< level << "> "
+			<< boost::this_thread::get_id() << "  " 
+			<< boost::posix_time::microsec_clock().local_time()
+			<< "  ";
 		return this->buffer;
 	}
 

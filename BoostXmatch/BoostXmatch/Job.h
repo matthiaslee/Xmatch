@@ -20,10 +20,9 @@ namespace xmatch
 	public:
 		JobStatus status;
 		SegmentPtr segA, segB;
-		bool swap;
 		double sr_deg;
 
-		Job(SegmentPtr a, SegmentPtr b, bool swap, double sr_deg) : segA(a), segB(b), swap(swap), sr_deg(sr_deg), status(PENDING) { }
+		Job(SegmentPtr a, SegmentPtr b, double sr_deg) : segA(a), segB(b), sr_deg(sr_deg), status(PENDING) { }
 		uint32_t ShareSegment(const Job &rJob);
 		friend std::ostream& operator<< (std::ostream &rOs, const Job &rJob);
 	};

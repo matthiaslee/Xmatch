@@ -23,7 +23,7 @@ namespace xmatch
 	
 	std::ostream& operator<< (std::ostream &o, const Segment &s)
 	{
-		o << s.mId;
+		o << "SEG-" << s.mId;
 		return o;
 	}
 

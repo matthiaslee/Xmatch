@@ -21,7 +21,7 @@ namespace xmatch
 		JobVec jobs;
 
 	public:
-		JobManager(const SegmentVec& segA, const SegmentVec& segB, bool swap, double sr_deg);
+		JobManager(const SegmentVec& segA, const SegmentVec& segB, double sr_deg);
 
 		//	Prefers jobs with segments that the worker already holds
 		JobPtr NextPreferredJob(JobPtr oldjob);

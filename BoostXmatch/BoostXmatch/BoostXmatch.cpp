@@ -83,11 +83,11 @@ namespace xmatch
 
 	struct Parameter
 	{
-		uint32_t num_threads, num_obj, verbosity;
+		uint32_t num_threads, num_obj;
 		double zh_arcsec, sr_arcsec;
 		FileDesc fileA, fileB;
 		fs::path outpath;
-		int error;
+		int error, verbosity;
 		
 		//Parameter() : error(0), verbose(0), num_threads(0), num_obj(0), zh_arcsec(0), sr_arcsec(0), fileA(""), fileB(""), outpath("") {}
 		Parameter(int argc, char* argv[]) : error(0), verbosity(0)
@@ -103,8 +103,8 @@ namespace xmatch
 					("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 					("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
 					("threads,t", po::value<uint32_t>(&num_threads)->default_value(0), "number of threads, defaults to # of GPUs")
-					("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects in a segment, defaults to full set")
-					("verbose,v", po::value<uint32_t>()->implicit_value(1), "enable verbosity (optionally specify level)")
+					("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects per segment, defaults to ???")
+					("verbose,v", po::value<uint32_t>()->implicit_value(3), "enable verbosity (implicit level 3=PROGRESS)")
 					("help,h", "print help message")
 				;
 				// hidden 
@@ -161,17 +161,17 @@ namespace xmatch
 			outpath = ofile;
 		}
 		
-		friend std::ostream& operator<< (std::ostream& out, const Parameter& p) 
+		void MakeLog(std::ostream& out, LogLevel level) 
 		{
-			out << "Parameters: " << std::endl;
-			out << "Input file(s): " << p.fileA << " " << p.fileB << std::endl;
-			out << "Output file: " << p.outpath << std::endl;
-			out << "Search radius: " << p.sr_arcsec << std::endl;                
-			out << "Zone height: " << p.zh_arcsec << std::endl;                
-			out << "Verbosity: " << p.verbosity << std::endl;
-			out << "# of threads: " << p.num_threads << std::endl;                
-			out << "# of obj/seg: " << p.num_obj;                
-			return out;
+			if (level > verbosity) return;
+			Log(out).Get(level) << "Input file A   :  " << fileA << std::endl;
+			Log(out).Get(level) << "Input file B   :  " << fileB << std::endl;
+			Log(out).Get(level) << "Output file    :  " << outpath << std::endl;
+			Log(out).Get(level) << "Search radius  :  " << sr_arcsec << std::endl;                
+			Log(out).Get(level) << "Zone height    :  " << zh_arcsec << std::endl;                
+			Log(out).Get(level) << "Verbosity      :  " << verbosity << std::endl;
+			Log(out).Get(level) << "# of threads   :  " << num_threads << std::endl;                
+			Log(out).Get(level) << "# of obj/seg   :  " << num_obj << std::endl;                
 		}
 	};
 
@@ -194,27 +194,22 @@ namespace xmatch
 		if (pmt.num_threads<1) 
 			pmt.num_threads = cuman->GetDeviceCount();
 
+		pmt.MakeLog(std::cout, INFO);
+
 		int verbosity = pmt.verbosity;
+		xlog(DEBUG) << "# of GPUs: " << cuman->GetDeviceCount() << std::endl;
 
-		xlog(1) << pmt << std::endl;
-		xlog(2) << "# of GPUs: " << cuman->GetDeviceCount() << std::endl;
+		xlog(DEBUG) << "# of objects for memory  : " << pmt.fileA.size / sizeof(Obj) << std::endl;
+		xlog(DEBUG) << "# of objects for looping : " << pmt.fileB.size / sizeof(Obj) << std::endl;		
 
-
-		// swap if B is smaller
-		bool swap = false;
-		if (pmt.fileB.size < pmt.fileA.size)
-		{
-			xlog(2) << "Swapping order of files" << std::endl;
-			swap = true;
-			std::swap(pmt.fileA, pmt.fileB);
-		}
-		xlog(2) << "# of objects for RAM: " << pmt.fileA.size / sizeof(Obj) << std::endl;
-		xlog(2) << "# of objects for FIL: " << pmt.fileB.size / sizeof(Obj) << std::endl;		
+		// warn if B is smaller
+		if (pmt.fileB.size < pmt.fileA.size) 
+			xlog(WARNING) << "!! Larger file in memory?!" << std::endl;
 
 		//
 		// load segments from small file
 		// 
-		xlog(2) << "Reading file" << std::endl;
+		xlog(PROGRESS) << "Loading file " << pmt.fileA.path << std::endl;
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
@@ -226,13 +221,13 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				xlog(2) << "id:" << sid << " num:" << num << std::endl;
+				xlog(DEBUG) << "- " << *s << " has " << num << std::endl;				
 				s->Load(file);
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
 
-			xlog(2) << "Sorting segments" << std::endl;
+			xlog(PROGRESS) << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
@@ -246,6 +241,7 @@ namespace xmatch
 		// 
 		// loop on larger file
 		//
+		xlog(PROGRESS) << "Looping on file " << pmt.fileB.path << std::endl;
 		fs::ifstream file(pmt.fileB.path, std::ios::in | std::ios::binary);
 		uint64_t len = pmt.fileB.size / sizeof(Obj);
 		uint32_t sid = 0;
@@ -258,13 +254,13 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				xlog(2) << "sid:" << sid << " num:" << num << std::endl;				
+				xlog(DEBUG) << "- " << *s << " has " << num << std::endl;				
 				s->Load(file);
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}
 
-			xlog(2) << "Sorting segments" << std::endl;
+			xlog(PROGRESS) << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
@@ -274,22 +270,27 @@ namespace xmatch
 				sorters.join_all();
 			}
 
-			xlog(2) << "Processing jobs" << std::endl;
+			xlog(PROGRESS) << "Processing jobs" << std::endl;
 			// process jobs
 			{
-				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap,pmt.sr_arcsec/3600));
+				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,pmt.sr_arcsec/3600));
 				boost::thread_group workers;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
 				{
-					std::ostringstream oss;	     
-					oss << "." << wid++;
-					Worker w = Worker(cuman, it, jobman, pmt.outpath.string() + oss.str(), verbosity);
+					std::string outpath("");
+					if (!pmt.outpath.empty())
+					{
+						std::ostringstream oss;	     
+						oss << pmt.outpath.string() << "." << wid++;
+						outpath = oss.str();
+					}
+					Worker w = Worker(cuman, it, jobman, outpath, verbosity);
 					workers.create_thread(w);
 				}
 				workers.join_all();
 			}
 		}
-		xlog(1) << "[main] done" << std::endl;
+		xlog(PROGRESS) << "Done!" << std::endl;
 		return 0;
 	}
 

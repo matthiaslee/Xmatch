@@ -4,7 +4,7 @@
 #pragma warning(push)
 #pragma warning(disable: 4996)      // Thrust's use of strerror
 #pragma warning(disable: 4251)      // STL class exports
-#include <thrust/version.h>
+//#include <thrust/version.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
@@ -43,14 +43,14 @@ namespace xmatch
 	struct get_id
 	{
 		__host__ __device__ 
-		int64_t operator()(Obj o) const { return o.mId; }
+		int64_t operator()(const Obj& o) const { return o.mId; }
 	};
 
 	// functor for splitting object list
 	struct get_radec_radian
 	{
 		__host__ __device__
-		dbl2 operator()(Obj o) const
+		dbl2 operator()(const Obj& o) const
 		{
 			dbl2 r;
 			r.x = o.mRa/RAD2DEG;
@@ -93,7 +93,7 @@ namespace xmatch
 
 	void Sorter::Sort(SegmentPtr seg) 
 	{
-		xlog(1) << "GPU" << id << " sorting..." << std::endl;
+		xlog(TIMING) << "- GPU-" << id << " sorting" << std::endl;
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
 		thrust::device_vector<int64_t> dId(seg->vObj.size());
 		thrust::device_vector<dbl2> dRadec(seg->vObj.size());
@@ -102,14 +102,19 @@ namespace xmatch
 		thrust::copy(seg->vObj.begin(), seg->vObj.end(), dObj.begin());
 		seg->vObj.resize(0);
 		thrust::sort(dObj.begin(), dObj.end(), less_zonera(zh_deg));
+		
+		xlog(TIMING) << "- GPU-" << id << " splitting" << std::endl;
 		// split
 		thrust::transform(dObj.begin(), dObj.end(), dId.begin(), get_id());
 		thrust::transform(dObj.begin(), dObj.end(), dRadec.begin(), get_radec_radian());
+
+		xlog(TIMING) << "- GPU-" << id << " copying to host" << std::endl;
 		// copy back
 		seg->vId = dId;
 		seg->vRadec = dRadec;
 		seg->mZoneHeightDegree = zh_deg;
 
+		xlog(DEBUG2) << "- GPU-" << id << " zone boundaries" << std::endl;
 		// zone limits on gpu
 		{
 			int n_zones = (int) ceil(180/zh_deg);
@@ -124,7 +129,7 @@ namespace xmatch
 			seg->vZoneBegin = d_zone_begin;
 			seg->vZoneEnd = d_zone_end;
 		}
-		xlog(1) << "GPU" << id << " sorting done" << std::endl;
+		xlog(TIMING) << "- GPU-" << id << " done" << std::endl;
 	}
 
 	void Sorter::operator()()
@@ -132,7 +137,7 @@ namespace xmatch
 		try  
 		{
 			cudaError_t err = cuman->SetDevice(this->id);
-			if (err) { xlog(0) << "Cannot set CUDA device " << this->id << std::endl; return;	}
+			if (err!=cudaSuccess) { xlog(ERROR) << "Cannot set CUDA device on GPU- " << this->id << std::endl; return;	}
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  
@@ -145,13 +150,14 @@ namespace xmatch
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  {  xlog(0) << exc.what() << std::endl;	}  
-		catch (...)  {  xlog(0) << "Unknown error!" << std::endl;	}  
+		catch (std::exception& exc)  {  xlog(ERROR) << exc.what() << std::endl;	}  
+		catch (...)  {  xlog(ERROR) << "Unknown error!" << std::endl;	}  
 		// reset device
 		{
 			cudaError_t err = cuman->Reset(); 
-			if (err) xlog(0) << "Cannot reset CUDA device " << this->id << std::endl;			
+			if (err!=cudaSuccess) xlog(ERROR) << "Cannot reset CUDA device on GPU-" << this->id << std::endl;			
 		}
+
 	} // operator()
 
 } // xmatch

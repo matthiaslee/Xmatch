@@ -22,7 +22,10 @@ namespace xmatch
 		void Match(JobPtr job);
 
 	public:
-		Worker(CudaManagerPtr cuman, uint32_t id, JobManagerPtr jobman, std::string outpath, int verbosity) : cuman(cuman), id(id), jobman(jobman), outpath(outpath), verbosity(verbosity), oldjob((Job*)NULL) {	}
+		Worker(CudaManagerPtr cuman, uint32_t id, JobManagerPtr jobman, std::string outpath, int verbosity) 
+			: cuman(cuman), id(id), jobman(jobman), outpath(outpath), verbosity(verbosity), oldjob((Job*)NULL) 
+		{ }
+
 		void operator()();		
 	};
 }

@@ -9,15 +9,17 @@
 
 namespace xmatch
 {	
+	enum LogLevel { ERROR, WARNING, INFO, PROGRESS, TIMING, DEBUG, DEBUG2, DEBUG3 };
+
 	class Log
 	{
-		 std::ostringstream buffer;
-		 std::ostream& os;
+		std::ostringstream buffer;
+		std::ostream& os;
 
     public:
 		Log(std::ostream& os) : os(os) { }
 		~Log();
-		std::ostream& Get(int level);
+		std::ostream& Get(LogLevel level);
 	};
 }
 

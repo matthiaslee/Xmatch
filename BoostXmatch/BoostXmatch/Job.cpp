@@ -12,7 +12,7 @@ namespace xmatch
 
 	std::ostream& operator<<(std::ostream &rOs, const Job &rJob)
 	{
-		rOs << "Job " << rJob.segA->mId << "x" << rJob.segB->mId; 
+		rOs << "Job-" << rJob.segA->mId << "x" << rJob.segB->mId; 
 		return rOs;
 	}
 }
