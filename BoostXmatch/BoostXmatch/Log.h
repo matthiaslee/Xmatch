@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: Worker.h 7016 2011-07-06 01:35:38Z budavari $
- *   Revision:    $Rev: 7016 $
+ *   ID:          $Id: $
+ *   Revision:    $Rev: $
  */
 #pragma once
 #ifndef LOG_H
@@ -12,26 +12,20 @@ namespace xmatch
 	class Log
 	{
 		 std::ostringstream buffer;
-		 int level;
+		 std::ostream& os;
 
     public:
-		Log(int level);
+		Log(std::ostream& os) : os(os) { }
 		~Log();
-
-		template <typename T>
-		Log& operator<< (const T& t)
-		{
-			buffer << t;
-			return *this;
-		}
+		std::ostream& Get(int level);
 	};
 }
 
 // Trick?
 // #define xlog(level,verbosity) if( (level) < (verbosity) ) /* pass */; else Logger(level)
 
-#define xlog_1 Log(1)
-#define xlog_2 Log(2)
-#define xlog_3 Log(3)
+#define xlog_1 Log(std::cout).Get(1)
+#define xlog_2 Log(std::cout).Get(2)
+#define xlog_3 Log(std::cout).Get(3)
 
 #endif /* LOG_H */

@@ -8,14 +8,16 @@ extern boost::mutex mtx_cout;
 
 namespace xmatch
 {
-	Log::Log(int level) : level(level)
-	{ 
-		buffer << level << "> " << boost::posix_time::second_clock().local_time() << " : " << boost::this_thread::get_id() << " -- ";
+	std::ostream& Log::Get(int level) 
+	{
+		this->buffer << boost::this_thread::get_id() << "  " << boost::posix_time::second_clock().local_time() << "  <" << level << ">  ";
+		return this->buffer;
 	}
 
 	Log::~Log()
 	{
 		boost::mutex::scoped_lock lock(mtx_cout);
-		std::cout << buffer.str() << std::endl;
+		this->os << this->buffer.str();
+		this->os.flush();
 	}
 }
