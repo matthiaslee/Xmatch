@@ -3,9 +3,8 @@
 ------
  - Output results to files
  - Only copy to GPU, if needed
- - RA wraparound
- - Linux make file (CMake?)
-
+ - R.A. wraparound
+ - Linux Makefile (CMake?)
 
 
 Notes:

@@ -231,7 +231,7 @@ namespace xmatch
 
 	void Worker::Match(JobPtr job)
 	{
-		xlog(TIMING) << "- GPU-" << id << " " << *job << " copying to devive" << std::endl;
+		xlog(TIMING) << "- GPU-" << id << " " << *job << " copying to device" << std::endl;
 		// copy to gpu  -- shd look 1st if already there...
 		thrust::device_vector<dbl2> d1_radec = job->segA->vRadec;
 		thrust::device_vector<dbl2> d2_radec = job->segB->vRadec;
