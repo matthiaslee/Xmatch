@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: $
- *   Revision:    $Rev: $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #pragma once
 #ifndef LOG_H
@@ -21,11 +21,9 @@ namespace xmatch
 	};
 }
 
-// Trick?
-// #define xlog(level,verbosity) if( (level) < (verbosity) ) /* pass */; else Logger(level)
+#define clog(cond) if(!(cond)) /* pass */; else Log(std::cout).Get(level)
+#define xlog(level) if( (level) > (verbosity) ) /* pass */; else Log(std::cout).Get(level)
 
-#define xlog_1 Log(std::cout).Get(1)
-#define xlog_2 Log(std::cout).Get(2)
-#define xlog_3 Log(std::cout).Get(3)
+
 
 #endif /* LOG_H */

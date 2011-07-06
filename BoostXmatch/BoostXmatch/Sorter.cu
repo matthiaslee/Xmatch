@@ -2,9 +2,8 @@
 #include "Log.h"
 
 #pragma warning(push)
-//#pragma warning(disable: 4996)      // Thrust's use of strerror
-//#pragma warning(disable: 4251)      // STL class exports
-//#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
+#pragma warning(disable: 4996)      // Thrust's use of strerror
+#pragma warning(disable: 4251)      // STL class exports
 #include <thrust/version.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -94,7 +93,7 @@ namespace xmatch
 
 	void Sorter::Sort(SegmentPtr seg) 
 	{
-		xlog_1 << "GPU" << id << " sorting..." << std::endl;
+		xlog(1) << "GPU" << id << " sorting..." << std::endl;
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
 		thrust::device_vector<int64_t> dId(seg->vObj.size());
 		thrust::device_vector<dbl2> dRadec(seg->vObj.size());
@@ -125,7 +124,7 @@ namespace xmatch
 			seg->vZoneBegin = d_zone_begin;
 			seg->vZoneEnd = d_zone_end;
 		}
-		xlog_2 << "GPU" << id << " sorting done" << std::endl;
+		xlog(1) << "GPU" << id << " sorting done" << std::endl;
 	}
 
 	void Sorter::operator()()
@@ -133,7 +132,7 @@ namespace xmatch
 		try  
 		{
 			cudaError_t err = cuman->SetDevice(this->id);
-			if (err) { std::cerr << "Cannot set CUDA device " << this->id << std::endl; return;	}
+			if (err) { xlog(0) << "Cannot set CUDA device " << this->id << std::endl; return;	}
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  
@@ -146,12 +145,12 @@ namespace xmatch
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  {  std::cerr << exc.what() << std::endl;	}  
-		catch (...)  {  std::cerr << "Unknown error!" << std::endl;	}  
+		catch (std::exception& exc)  {  xlog(0) << exc.what() << std::endl;	}  
+		catch (...)  {  xlog(0) << "Unknown error!" << std::endl;	}  
 		// reset device
 		{
 			cudaError_t err = cuman->Reset(); 
-			if (err) std::cerr << "Cannot reset CUDA device " << this->id << std::endl;					
+			if (err) xlog(0) << "Cannot reset CUDA device " << this->id << std::endl;			
 		}
 	} // operator()
 

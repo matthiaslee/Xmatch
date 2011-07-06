@@ -1,15 +1,16 @@
 #include "Worker.h"
-#include <fstream>
+#include "Log.h"
 
+#include <fstream>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 
 #pragma warning(push)
-//#pragma warning(disable: 4996)      // Thrust's use of strerror
-//#pragma warning(disable: 4251)      // STL class exports
-//#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
+#pragma warning(disable: 4996)      // Thrust's use of strerror
+#pragma warning(disable: 4251)      // STL class exports
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <thrust/version.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -230,8 +231,9 @@ void xmatch_kernel(	const dbl2* p_radec1, int i1s, int i1e,
 
 }
 
-void Match(JobPtr job)
+void Worker::Match(JobPtr job)
 {
+	xlog(2) << "GPU" << id << " starting..." << std::endl;
 	// copy to gpu  -- shd look 1st if already there...
 	thrust::device_vector<dbl2> d1_radec = job->segA->vRadec;
 	thrust::device_vector<dbl2> d2_radec = job->segB->vRadec;
@@ -295,7 +297,7 @@ void Match(JobPtr job)
 
 //	thrust::copy(d_match_idx.begin(), d_match_idx.end(), h_match_idx.begin());
 
-	std::cerr << "#: " << match_num << std::endl;
+	xlog(2) << "GPU" << id << " found: " << match_num << std::endl;
 
 
 #ifdef OUT_YET

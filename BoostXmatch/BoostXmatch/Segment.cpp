@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: Segment.cu 6993 2011-06-30 04:42:53Z budavari $
- *   Revision:    $Rev: 6993 $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #include "Segment.h"
 

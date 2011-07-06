@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: Obj.cu 6985 2011-06-29 16:33:33Z budavari $
- *   Revision:    $Rev: 6985 $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #include "Obj.h"
 

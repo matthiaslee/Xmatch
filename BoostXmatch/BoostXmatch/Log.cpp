@@ -1,13 +1,18 @@
 #include "Log.h"
 
-#include "boost/date_time/posix_time/posix_time.hpp"
+#pragma warning(push)
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#pragma warning(pop)
 
-extern boost::mutex mtx_cout;
 
 namespace xmatch
 {
+	// global mutex
+	extern boost::mutex mtx_log;
+
 	std::ostream& Log::Get(int level) 
 	{
 		this->buffer << boost::this_thread::get_id() << "  " << boost::posix_time::second_clock().local_time() << "  <" << level << ">  ";
@@ -16,7 +21,7 @@ namespace xmatch
 
 	Log::~Log()
 	{
-		boost::mutex::scoped_lock lock(mtx_cout);
+		boost::mutex::scoped_lock lock(mtx_log);
 		this->os << this->buffer.str();
 		this->os.flush();
 	}

@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: SegmentManager.h 7013 2011-07-05 19:08:44Z budavari $
- *   Revision:    $Rev: 7013 $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #pragma once
 #ifndef CUDAMANAGER_H

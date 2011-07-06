@@ -33,10 +33,9 @@ THE SOFTWARE.
 #include "CudaManager.h"
 #include "Sorter.h"
 #include "Worker.h"
+#include "Log.h"
 
 #pragma warning(push)
-//#pragma warning(disable: 4996)      // Thrust's use of strerror
-//#pragma warning(disable: 4251)      // STL class exports
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
@@ -44,16 +43,16 @@ THE SOFTWARE.
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
-//#include <boost/log/trivial.hpp>
 #pragma warning(pop)
 
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
-boost::mutex mtx_cout;
-
 namespace xmatch
 {
+	// global mutex for logging
+	boost::mutex mtx_log;
+
 	// dump a vector by elements
 	template<class T>
 	std::ostream& operator<< (std::ostream& os, const std::vector<T>& v)
@@ -84,14 +83,14 @@ namespace xmatch
 
 	struct Parameter
 	{
-		uint32_t num_threads, num_obj, verbose;
+		uint32_t num_threads, num_obj, verbosity;
 		double zh_arcsec, sr_arcsec;
 		FileDesc fileA, fileB;
 		fs::path outpath;
 		int error;
 		
 		//Parameter() : error(0), verbose(0), num_threads(0), num_obj(0), zh_arcsec(0), sr_arcsec(0), fileA(""), fileB(""), outpath("") {}
-		Parameter(int argc, char* argv[]) : error(0), verbose(0)
+		Parameter(int argc, char* argv[]) : error(0), verbosity(0)
 		{
 			po::options_description options("Options");
 			po::variables_map vm;
@@ -149,7 +148,7 @@ namespace xmatch
 			}
 			// default zone height is radius
 			if (zh_arcsec == 0) zh_arcsec = sr_arcsec;
-			if (vm.count("verbose")) verbose = vm["verbose"].as<uint32_t>();
+			if (vm.count("verbose")) verbosity = vm["verbose"].as<uint32_t>();
 			fileA = FileDesc(ifiles[0]);
 			fileB = FileDesc(ifiles[1]);
 			if (fileA.size == 0 || fileB.size == 0)
@@ -164,13 +163,14 @@ namespace xmatch
 		
 		friend std::ostream& operator<< (std::ostream& out, const Parameter& p) 
 		{
-			out << " -1- Input file(s): " << p.fileA << " " << p.fileB << std::endl;
-			out << " -1- Output file: " << p.outpath << std::endl;
-			out << " -1- Search radius: " << p.sr_arcsec << std::endl;                
-			out << " -1- Zone height: " << p.zh_arcsec << std::endl;                
-			out << " -1- Verbosity: " << p.verbose << std::endl;
-			out << " -1- # of threads: " << p.num_threads << std::endl;                
-			out << " -1- # of obj/seg: " << p.num_obj;                
+			out << "Parameters: " << std::endl;
+			out << "Input file(s): " << p.fileA << " " << p.fileB << std::endl;
+			out << "Output file: " << p.outpath << std::endl;
+			out << "Search radius: " << p.sr_arcsec << std::endl;                
+			out << "Zone height: " << p.zh_arcsec << std::endl;                
+			out << "Verbosity: " << p.verbosity << std::endl;
+			out << "# of threads: " << p.num_threads << std::endl;                
+			out << "# of obj/seg: " << p.num_obj;                
 			return out;
 		}
 	};
@@ -194,26 +194,27 @@ namespace xmatch
 		if (pmt.num_threads<1) 
 			pmt.num_threads = cuman->GetDeviceCount();
 
-		if (pmt.verbose) std::cout << pmt << std::endl;
-		if (pmt.verbose>2)
-			std::cout << " -3- # of GPUs: " << cuman->GetDeviceCount() << std::endl;
+		int verbosity = pmt.verbosity;
+
+		xlog(1) << pmt << std::endl;
+		xlog(2) << "# of GPUs: " << cuman->GetDeviceCount() << std::endl;
+
 
 		// swap if B is smaller
 		bool swap = false;
 		if (pmt.fileB.size < pmt.fileA.size)
 		{
-			if (pmt.verbose>1) std::cout << " -2- Swapping order of files" << std::endl;
+			xlog(2) << "Swapping order of files" << std::endl;
 			swap = true;
 			std::swap(pmt.fileA, pmt.fileB);
 		}
-		if (pmt.verbose>1) 
-			std::cout << " -2- # of objects for RAM: " << pmt.fileA.size / sizeof(Obj) << std::endl
-					  << " -2- # of objects for FIL: " << pmt.fileB.size / sizeof(Obj) << std::endl;		
+		xlog(2) << "# of objects for RAM: " << pmt.fileA.size / sizeof(Obj) << std::endl;
+		xlog(2) << "# of objects for FIL: " << pmt.fileB.size / sizeof(Obj) << std::endl;		
 
 		//
 		// load segments from small file
 		// 
-		if (pmt.verbose>1) std::cout << " -2- Reading file" << std::endl;
+		xlog(2) << "Reading file" << std::endl;
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
@@ -225,19 +226,19 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				if (pmt.verbose>2) std::cout << " -3- id:" << sid << " num:" << num << std::endl;
+				xlog(2) << "id:" << sid << " num:" << num << std::endl;
 				s->Load(file);
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
 
-			if (pmt.verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			xlog(2) << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600));
+					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600, verbosity));
 				sorters.join_all();
 			}
 		}
@@ -257,23 +258,23 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				if (pmt.verbose>2) std::cout << " -3- sid:" << sid << " num:" << num << std::endl;				
+				xlog(2) << "sid:" << sid << " num:" << num << std::endl;				
 				s->Load(file);
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}
 
-			if (pmt.verbose>1) std::cout << " -2- Sorting segments" << std::endl;
+			xlog(2) << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600));
+					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600, verbosity));
 				sorters.join_all();
 			}
 
-			if (pmt.verbose>1) std::cout << " -2- Processing jobs" << std::endl;
+			xlog(2) << "Processing jobs" << std::endl;
 			// process jobs
 			{
 				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,swap,pmt.sr_arcsec/3600));
@@ -282,12 +283,13 @@ namespace xmatch
 				{
 					std::ostringstream oss;	     
 					oss << "." << wid++;
-					Worker w = Worker(cuman, it, jobman, pmt.outpath.string() + oss.str());
+					Worker w = Worker(cuman, it, jobman, pmt.outpath.string() + oss.str(), verbosity);
 					workers.create_thread(w);
 				}
 				workers.join_all();
 			}
 		}
+		xlog(1) << "[main] done" << std::endl;
 		return 0;
 	}
 

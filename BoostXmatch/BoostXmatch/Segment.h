@@ -11,10 +11,9 @@
 
 #pragma warning(push)
 #pragma warning(disable: 4996)      // Thrust's use of strerror
-//#pragma warning(disable: 4251)      // STL class exports
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/shared_ptr.hpp>
-#include "thrust/host_vector.h"
+#include <thrust/host_vector.h>
 #pragma warning(pop)
 
 
