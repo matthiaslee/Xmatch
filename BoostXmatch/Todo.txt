@@ -1,0 +1,7 @@
+
+ TODO:
+======
+ - Only copy to GPU, if needed
+ - RA wraparound
+ - Linux make file (CMake?)
+ - 
