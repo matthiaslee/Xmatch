@@ -7,7 +7,6 @@
 #define JOB_H
 #include "Segment.h"
 
-#include <cstdint>
 #include <iostream>
 
 

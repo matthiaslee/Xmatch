@@ -6,8 +6,13 @@
 #ifndef OBJ_H
 #define OBJ_H
 
-#include <cstdint>
 #include <iostream>
+
+#pragma warning(push)
+#pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
+#include <boost/cstdint.hpp>
+#pragma warning(pop)
+
 
 #define RAD2DEG 57.295779513082323
 
@@ -19,17 +24,6 @@ namespace xmatch
 	{
 		int64_t mId;
 		double mRa, mDec;
-
-#ifdef NOT_HERE
-		__device__ __host__
-		Obj() : mId(0), mRa(0), mDec(0) { }
-
-		__device__ __host__
-		Obj(int64_t id, double ra, double dec) : mId(id), mRa(ra), mDec(dec) { } 
-
-		__device__ __host__
-		Obj(const Obj& o) : mId(o.mId), mRa(o.mRa), mDec(o.mDec) { }
-#endif
 	};
 
 	std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
