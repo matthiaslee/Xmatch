@@ -229,19 +229,18 @@ namespace xmatch
 
 	}
 
-	void Worker::Match(JobPtr job)
+	void Worker::Match(JobPtr job, std::ofstream& outfile)
 	{
-		xlog(TIMING) << "- GPU-" << id << " " << *job << " copying to device" << std::endl;
+		LOG_TIM << "- GPU-" << id << " " << *job << " copying to device" << std::endl;
 		// copy to gpu  -- shd look 1st if already there...
 		thrust::device_vector<dbl2> d1_radec = job->segA->vRadec;
 		thrust::device_vector<dbl2> d2_radec = job->segB->vRadec;
 	
-		// xmatch limit -- hack for now...
+		// xmatch alloc limit -- hack for now...
 		unsigned int n_match_alloc = 2 * std::max (d1_radec.size(), d2_radec.size());
-
-		// alloc
-		thrust::device_vector<unsigned int> d_match_num(1);
 		thrust::device_vector<uint2> d_match_idx(n_match_alloc);
+		thrust::device_vector<unsigned int> d_match_num(1);
+
 		// pointers
 		dbl2* p1_radec = thrust::raw_pointer_cast(&d1_radec[0]);
 		dbl2* p2_radec = thrust::raw_pointer_cast(&d2_radec[0]);
@@ -257,7 +256,7 @@ namespace xmatch
 		double sr_dist2 = 2.0 * sin( sr_rad / 2.0 );
 		sr_dist2 *= sr_dist2;
 
-		xlog(TIMING) << "- GPU-" << id << " " << *job << " kernel launches" << std::endl;
+		LOG_TIM << "- GPU-" << id << " " << *job << " kernel launches" << std::endl;
 
 		// loop
 		for (int zid1 = 0; zid1 < n_zones; zid1++)
@@ -269,6 +268,8 @@ namespace xmatch
 			if (n1 < 1) continue;
 
 			double alpha_rad = calc_alpha(sr_deg, zh_deg, zid1); // in radians
+
+			// deal with RA wraparound here or after the kernel launch
 
 			int zid2start = std::max(0,zid1-nz);
 			int zid2end = std::min(n_zones-1,zid1+nz);
@@ -290,83 +291,114 @@ namespace xmatch
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...
 		}
-		cudaThreadSynchronize();	
+		//cudaThreadSynchronize();
+		cudaDeviceSynchronize();
+		//if (err != cudaSuccess) LOG_ERR  << "- GPU-" << id << " " << *job << " !! Cannnot sync !!" << std::endl; 
 
 		// fetch number of matches from gpu
 		unsigned int match_num = d_match_num[0];
-		xlog(TIMING) << "- GPU-" << id << " " << *job << " # " << match_num << std::endl;
+		LOG_TIM << "- GPU-" << id << " " << *job << " # " << match_num << std::endl;
 
+		// copy indices to host
 		thrust::host_vector<uint2> h_match_idx = d_match_idx;
 
-		if (n_match_alloc<match_num) 
-			xlog(ERROR) << "- GPU-" << id << " " << *job << " !! Truncated output !!" << std::endl;
-
+		// check if all matches fit in mem - hack guard
+		if (n_match_alloc < match_num) 
+		{
+			LOG_ERR << "- GPU-" << id << " " << *job << " !! Truncated output !!" << std::endl;
+		}
 
 		// dump 
 		{
 			int n_out = std::min(n_match_alloc, match_num);
-
 			// debug to screen: top 10
-			int n_top = std::min(n_out,10);
-			for (int i=0; i<n_top; i++)
+			if (true)
 			{
-				uint2 idx = h_match_idx[i];
-				xlog(DEBUG2) << " \t" 
-					<< job->segA->vId[idx.x] << " "
-					<< job->segB->vId[idx.y] << std::endl;
-			}
-
-			// dump binary to file
-			if (!outpath.empty())
-			{
-				// open the output file
-				std::ofstream outfile(outpath, std::ios::out | std::ios::binary);
-				if (!outfile.is_open())
+				int n_top = std::min(n_out,10);
+				for (int i=0; i<n_top; i++)
 				{
-					xlog(ERROR) << "- GPU-" << id << " " << *job << " !! Cannot open output file !!" << std::endl;
-					return;
+					uint2 idx = h_match_idx[i];
+					LOG_DBG2 << " \t" 
+						<< job->segA->vId[idx.x] << " "
+						<< job->segB->vId[idx.y] << std::endl;
 				}
-
-				outfile << "worked!" << std::endl;
-				// outfile.write( (char*) p_match_iden, n_out  * sizeof(longlong2) );
-
-				outfile.close();
+			}
+			// write binary
+			if (outfile.is_open())
+			{
+				int64_t objid;
+				for (int i=0; i<n_out; i++)
+				{
+					uint2 idx = h_match_idx[i];
+					objid = job->segA->vId[idx.x];
+					outfile.write((char*)&objid, sizeof(int64_t));
+					objid = job->segB->vId[idx.y];
+					outfile.write((char*)&objid, sizeof(int64_t));
+				}
+				//outfile.flush();
 			}
 		}
-
-		xlog(PROGRESS) << "- GPU-" << id << " " << *job << " done" << std::endl;
+		LOG_PRG << "- GPU-" << id << " " << *job << " done" << std::endl;
 	}
 
 	void Worker::operator()()
 	{   
+		cudaError_t err = cuman->SetDevice(this->id);
+		if (err!=cudaSuccess) 
+		{ 
+			LOG_ERR << "- GPU-" << id << " !! Cannot set CUDA device !!" << std::endl; 
+			return; 
+		}
+
+		std::ofstream outfile;
 		try  
 		{
-			cudaError_t err = cuman->SetDevice(this->id);
-			if (err!=cudaSuccess) { xlog(ERROR) << "Cannot set CUDA device on GPU-" << this->id << std::endl; return; }
-
-			bool   keepProcessing = true;
-			while (keepProcessing)  
-			{  
-				JobPtr job = jobman->NextPreferredJob(oldjob);
-				if (job == NULL) keepProcessing = false;
+			// open output file
+			if (!outpath.empty()) 
+			{
+				LOG_DBG << "- GPU-" << id << " output to file " << outpath << std::endl; 
+				outfile.open(outpath, std::ios::out | std::ios::binary);
+				if (!outfile.is_open())
+				{
+					LOG_ERR << "- GPU-" << id << " !! Cannot open output file !!" << std::endl;
+				}
 				else
 				{
-					Match(job);
-					jobman->SetStatus(job,FINISHED);
-					oldjob = job;
-				}				
-			}  
+					bool   keepProcessing = true;
+					while (keepProcessing)  
+					{  
+						JobPtr job = jobman->NextPreferredJob(oldjob);
+						if (job == NULL) keepProcessing = false;
+						else
+						{
+							Match(job,outfile);
+							jobman->SetStatus(job,FINISHED);
+							oldjob = job;
+						}				
+					}  
+				} 
+			} /* endif */
+
 		}
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  {  xlog(ERROR) << exc.what() << std::endl;	}  
-		catch (...)  {  xlog(ERROR) << "Unknown error!" << std::endl;	}  
+		catch (std::exception& exc)  
+		{  
+			LOG_ERR << "- GPU-" << id << " !! Error !!" << std::endl
+				        << exc.what() << std::endl;	
+		}  
+		catch (...)  
+		{  
+			LOG_ERR << "- GPU-" << id << " !! Unknown error !!" << std::endl;	
+		}  
 		// reset device
 		{
 			cudaError_t err = cuman->Reset(); 
-			if (err!=cudaSuccess) xlog(ERROR) << "Cannot reset CUDA device on GPU-" << this->id << std::endl;					
+			if (err!=cudaSuccess) 
+				LOG_ERR << "- GPU-" << id << " !! Cannot reset CUDA device !!" << std::endl;					
 		}
 
+		outfile.close();
 	}
 }

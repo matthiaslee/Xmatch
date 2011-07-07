@@ -23,9 +23,17 @@ namespace xmatch
 	};
 }
 
-#define clog(cond) if(!(cond)) /* pass */; else Log(std::cout).Get(level)
-#define xlog(level) if( (level) > (verbosity) ) /* pass */; else Log(std::cout).Get(level)
+//#define CLOG(cond) if(!(cond)) /* pass */; else Log(std::cout).Get(level)
+#define XLOG(level) if( (level) > (verbosity) ) /* pass */; else Log(std::cout).Get(level)
 
+#define LOG_ERR  XLOG(ERROR)
+#define LOG_WRN  XLOG(WARNING)
+#define LOG_INF  XLOG(INFO)
+#define LOG_PRG  XLOG(PROGRESS)
+#define LOG_TIM  XLOG(TIMING)
+#define LOG_DBG  XLOG(DEBUG)
+#define LOG_DBG2 XLOG(DEBUG2)
+#define LOG_DBG3 XLOG(DEBUG3)
 
 
 #endif /* LOG_H */

@@ -93,7 +93,7 @@ namespace xmatch
 
 	void Sorter::Sort(SegmentPtr seg) 
 	{
-		xlog(TIMING) << "- GPU-" << id << " sorting" << std::endl;
+		LOG_TIM << "- GPU-" << id << " sorting" << std::endl;
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
 		thrust::device_vector<int64_t> dId(seg->vObj.size());
 		thrust::device_vector<dbl2> dRadec(seg->vObj.size());
@@ -103,18 +103,18 @@ namespace xmatch
 		seg->vObj.resize(0);
 		thrust::sort(dObj.begin(), dObj.end(), less_zonera(zh_deg));
 		
-		xlog(TIMING) << "- GPU-" << id << " splitting" << std::endl;
+		LOG_TIM << "- GPU-" << id << " splitting" << std::endl;
 		// split
 		thrust::transform(dObj.begin(), dObj.end(), dId.begin(), get_id());
 		thrust::transform(dObj.begin(), dObj.end(), dRadec.begin(), get_radec_radian());
 
-		xlog(TIMING) << "- GPU-" << id << " copying to host" << std::endl;
+		LOG_TIM << "- GPU-" << id << " copying to host" << std::endl;
 		// copy back
 		seg->vId = dId;
 		seg->vRadec = dRadec;
 		seg->mZoneHeightDegree = zh_deg;
 
-		xlog(DEBUG2) << "- GPU-" << id << " zone boundaries" << std::endl;
+		LOG_DBG2 << "- GPU-" << id << " zone boundaries" << std::endl;
 		// zone limits on gpu
 		{
 			int n_zones = (int) ceil(180/zh_deg);
@@ -129,7 +129,7 @@ namespace xmatch
 			seg->vZoneBegin = d_zone_begin;
 			seg->vZoneEnd = d_zone_end;
 		}
-		xlog(TIMING) << "- GPU-" << id << " done" << std::endl;
+		LOG_TIM << "- GPU-" << id << " done" << std::endl;
 	}
 
 	void Sorter::operator()()
@@ -137,7 +137,7 @@ namespace xmatch
 		try  
 		{
 			cudaError_t err = cuman->SetDevice(this->id);
-			if (err!=cudaSuccess) { xlog(ERROR) << "Cannot set CUDA device on GPU-" << this->id << std::endl; return;	}
+			if (err!=cudaSuccess) { LOG_ERR << "Cannot set CUDA device on GPU-" << this->id << std::endl; return;	}
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  
@@ -150,12 +150,12 @@ namespace xmatch
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  {  xlog(ERROR) << exc.what() << std::endl;	}  
-		catch (...)  {  xlog(ERROR) << "Unknown error!" << std::endl;	}  
+		catch (std::exception& exc)  {  LOG_ERR << exc.what() << std::endl;	}  
+		catch (...)  {  LOG_ERR << "Unknown error!" << std::endl;	}  
 		// reset device
 		{
 			cudaError_t err = cuman->Reset(); 
-			if (err!=cudaSuccess) xlog(ERROR) << "Cannot reset CUDA device on GPU-" << this->id << std::endl;			
+			if (err!=cudaSuccess) LOG_ERR << "Cannot reset CUDA device on GPU-" << this->id << std::endl;			
 		}
 
 	} // operator()

@@ -1,8 +1,10 @@
 
  TODO:
 ------
- - Output results to files
  - Only copy to GPU, if needed
+ - Optimize output to files
+ - ObjID copy on GPU?
+ - Memory limit review
  - R.A. wraparound
  - Linux Makefile (CMake?)
 

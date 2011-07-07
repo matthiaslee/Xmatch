@@ -22,8 +22,21 @@ namespace xmatch
 		int n;
 		cudaError_t err = cudaGetDeviceCount(&n);
 		if (err != cudaSuccess) n = -1;
+		/*
+		cudaDeviceProp prop;
+		for (int i=0; i<n; i++)
+		{
+			cudaDeviceProp(&prop);
+		}
+		*/
 		return n;
 	}
+	/*
+	void CudaManager::GetDeviceProperties(int id, cudaDeviceProp *prop)
+	{
+		cudaDe
+	}
+	*/
 
 	// Print device properties
 	void Print(cudaDeviceProp devProp)

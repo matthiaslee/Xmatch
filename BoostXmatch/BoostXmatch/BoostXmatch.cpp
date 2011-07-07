@@ -197,19 +197,19 @@ namespace xmatch
 		pmt.MakeLog(std::cout, INFO);
 
 		int verbosity = pmt.verbosity;
-		xlog(DEBUG) << "# of GPUs: " << cuman->GetDeviceCount() << std::endl;
+		LOG_DBG << "# of GPUs: " << cuman->GetDeviceCount() << std::endl;
 
-		xlog(DEBUG) << "# of objects for memory  : " << pmt.fileA.size / sizeof(Obj) << std::endl;
-		xlog(DEBUG) << "# of objects for looping : " << pmt.fileB.size / sizeof(Obj) << std::endl;		
+		LOG_DBG << "# of objects for memory  : " << pmt.fileA.size / sizeof(Obj) << std::endl;
+		LOG_DBG << "# of objects for looping : " << pmt.fileB.size / sizeof(Obj) << std::endl;		
 
 		// warn if B is smaller
 		if (pmt.fileB.size < pmt.fileA.size) 
-			xlog(WARNING) << "!! Larger file in memory?!" << std::endl;
+			LOG_WRN << "!! Larger file in memory?!" << std::endl;
 
 		//
 		// load segments from small file
 		// 
-		xlog(PROGRESS) << "Loading file " << pmt.fileA.path << std::endl;
+		LOG_PRG << "Loading file " << pmt.fileA.path << std::endl;
 		SegmentVec segmentsRam;
 		{
 			fs::ifstream file(pmt.fileA.path, std::ios::in | std::ios::binary);
@@ -221,13 +221,13 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				xlog(DEBUG) << "- " << *s << " has " << num << std::endl;				
+				LOG_DBG << "- " << *s << " has " << num << std::endl;				
 				s->Load(file);
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
 			}	
 
-			xlog(PROGRESS) << "Sorting segments" << std::endl;
+			LOG_PRG << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
@@ -241,27 +241,27 @@ namespace xmatch
 		// 
 		// loop on larger file
 		//
-		xlog(PROGRESS) << "Looping on file " << pmt.fileB.path << std::endl;
+		LOG_PRG << "Looping on file " << pmt.fileB.path << std::endl;
 		fs::ifstream file(pmt.fileB.path, std::ios::in | std::ios::binary);
 		uint64_t len = pmt.fileB.size / sizeof(Obj);
 		uint32_t sid = 0;
 		uint32_t wid = 0;
 		while (len > 0)
 		{
-			xlog(PROGRESS) << "Loading segments" << std::endl;
+			LOG_PRG << "Loading segments" << std::endl;
 			SegmentVec segmentsFile;
 			// load segments
 			for (uint64_t i=0; i<pmt.num_threads; i++)
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				xlog(DEBUG) << "- " << *s << " has " << num << std::endl;				
+				LOG_DBG << "- " << *s << " has " << num << std::endl;				
 				s->Load(file);
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
 				len -= num;				
 			}
 
-			xlog(PROGRESS) << "Sorting segments" << std::endl;
+			LOG_PRG << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
@@ -271,7 +271,7 @@ namespace xmatch
 				sorters.join_all();
 			}
 
-			xlog(PROGRESS) << "Processing jobs" << std::endl;
+			LOG_PRG << "Processing jobs" << std::endl;
 			// process jobs
 			{
 				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,pmt.sr_arcsec/3600));
@@ -291,7 +291,7 @@ namespace xmatch
 				workers.join_all();
 			}
 		}
-		xlog(PROGRESS) << "Done!" << std::endl;
+		LOG_PRG << "Done!" << std::endl;
 		return 0;
 	}
 

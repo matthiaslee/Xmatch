@@ -19,7 +19,7 @@ namespace xmatch
 		std::string outpath;
 		int verbosity;
 
-		void Match(JobPtr job);
+		void Match(JobPtr job, std::ofstream& ofs);
 
 	public:
 		Worker(CudaManagerPtr cuman, uint32_t id, JobManagerPtr jobman, std::string outpath, int verbosity) 
