@@ -12,7 +12,6 @@ namespace xmatch
 	cudaError_t CudaManager::Reset()
 	{
 		boost::mutex::scoped_lock lock(mtx);
-		// cudaThreadExit() is now deprecated!
 		cudaError_t err = cudaDeviceReset();
 		return err;
 	}
@@ -22,15 +21,37 @@ namespace xmatch
 		int n;
 		cudaError_t err = cudaGetDeviceCount(&n);
 		if (err != cudaSuccess) n = -1;
-		/*
-		cudaDeviceProp prop;
-		for (int i=0; i<n; i++)
-		{
-			cudaDeviceProp(&prop);
-		}
-		*/
 		return n;
 	}
+
+	bool MeetsReq (const cudaDeviceProp& dev, const cudaDeviceProp& req)
+	{
+		if (dev.major < req.major) return false;
+		if (dev.minor < req.minor) return false;
+		if (dev.totalGlobalMem < req.totalGlobalMem) return false;
+		return true;
+	}
+
+	std::vector<int> CudaManager::Query(const cudaDeviceProp& req)
+	{
+		std::vector<int> devId;
+		int n;
+		cudaError_t err = cudaGetDeviceCount(&n);
+		if (err == cudaSuccess)
+		{
+			cudaDeviceProp prop;
+			for (int i=0; i<n; i++)
+			{
+				cudaGetDeviceProperties(&prop,i);
+				if (MeetsReq(prop, req))
+				{
+					devId.push_back(i);
+				}
+			}
+		}
+		return devId;
+	}
+
 	/*
 	void CudaManager::GetDeviceProperties(int id, cudaDeviceProp *prop)
 	{

@@ -10,6 +10,8 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 
+#include <vector>
+
 #pragma warning(push)
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/shared_ptr.hpp>
@@ -29,6 +31,8 @@ namespace xmatch
 		int GetDeviceCount();
 		cudaError_t SetDevice(int id);
 		cudaError_t Reset();
+
+		std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
 
 		static void Print(cudaDeviceProp devProp);
 	};
