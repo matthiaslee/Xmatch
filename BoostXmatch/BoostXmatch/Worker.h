@@ -13,9 +13,9 @@ namespace xmatch
 	class Worker
 	{    		
 		uint32_t id;
-		JobPtr oldjob;
-		JobManagerPtr jobman;
 		CudaManagerPtr cuman;
+		JobManagerPtr jobman;
+		JobPtr oldjob;
 		std::string outpath;
 		int verbosity;
 

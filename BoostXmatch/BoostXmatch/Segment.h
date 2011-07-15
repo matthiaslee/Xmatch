@@ -26,8 +26,9 @@ namespace xmatch
 		uintmax_t mNum;
 		double mZoneHeightDegree;
 
-		// main() reads here but clear()-ed later
+		// main() reads here but emptied later
 		thrust::host_vector<Obj> vObj; 
+
 		// pre-sorted data for processing
 		thrust::host_vector<int64_t> vId;
 		thrust::host_vector<dbl2> vRadec;

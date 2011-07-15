@@ -1,4 +1,5 @@
 #include "Worker.h"
+#include "Common.h"
 #include "Log.h"
 
 #include <fstream>
@@ -18,7 +19,7 @@
 #pragma warning(pop)
 
 
-#define THREADS_PER_BLOCK 512
+#define THREADS_PER_BLOCK 256
 
 
 namespace xmatch
@@ -49,27 +50,6 @@ namespace xmatch
 		*z = sd;
 	}
 	#endif
-
-	// Gray, Nieto & Szalay 2007 (arXiv:cs/0701171v1)
-	__host__ __device__
-	double calc_alpha(double theta, double abs_dec)
-	{
-		if ( abs_dec+theta > 89.99 ) return 180;
-		return abs( atan(sin(theta / RAD2DEG))
-					/ sqrt( abs( cos((abs_dec-theta) / RAD2DEG) 
-							   * cos((abs_dec+theta) / RAD2DEG) )) 
-				);
-	}
-
-	__host__ __device__
-	double calc_alpha(double theta, double zh_deg, int zone)
-	{
-		double dec  = abs( zone    * zh_deg - 90);
-		double dec2 = abs((zone+1) * zh_deg - 90);
-		dec = (dec > dec2 ? dec : dec2);
-		return calc_alpha(theta, dec + 1e-3); // with overshoot
-	}
-
 
 	/*
 		CUDA kernel
@@ -343,10 +323,10 @@ namespace xmatch
 
 	void Worker::operator()()
 	{   
-		cudaError_t err = cuman->SetDevice(this->id);
-		if (err!=cudaSuccess) 
+		CudaContextPtr ctx = cuman->GetContext();
+		if (ctx->GetDeviceID() < 0) 
 		{ 
-			LOG_ERR << "- GPU-" << id << " !! Cannot set CUDA device !!" << std::endl; 
+			LOG_ERR << "- GPU-" << id << " !! Cannot get CUDA context !!" << std::endl; 
 			return; 
 		}
 
@@ -392,12 +372,6 @@ namespace xmatch
 		{  
 			LOG_ERR << "- GPU-" << id << " !! Unknown error !!" << std::endl;	
 		}  
-		// reset device
-		{
-			cudaError_t err = cuman->Reset(); 
-			if (err!=cudaSuccess) 
-				LOG_ERR << "- GPU-" << id << " !! Cannot reset CUDA device !!" << std::endl;					
-		}
 
 		outfile.close();
 	}

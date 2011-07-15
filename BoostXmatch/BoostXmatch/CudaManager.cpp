@@ -1,31 +1,35 @@
 #include "CudaManager.h"
 
+#include <cuda_runtime.h>
+
 namespace xmatch
 {
-	cudaError_t CudaManager::SetDevice(int id)
+	CudaManager::CudaManager() 
 	{
-		boost::mutex::scoped_lock lock(mtx);
-		cudaError_t err; 
-		err = cudaSetDevice(id);
-		return err;
+		cudaError_t err = cudaGetDeviceCount(&nDevices);
+		if (err != cudaSuccess) nDevices = 0;
 	}
 
-	cudaError_t CudaManager::Reset()
+	CudaContextPtr CudaManager::GetContext(int id)
 	{
-		boost::mutex::scoped_lock lock(mtx);
-		//cudaError_t err = cudaDeviceReset();
-		cudaError_t err = cudaThreadExit();
-		return err;
+		CudaContext *ctx = new CudaContext(id);
+		return CudaContextPtr(ctx);
 	}
 
-	int CudaManager::GetDeviceCount()
+	CudaContextPtr CudaManager::GetContext()
 	{
-		int n;
-		cudaError_t err = cudaGetDeviceCount(&n);
-		if (err != cudaSuccess) n = -1;
-		return n;
+		CudaContextPtr ctx;
+		for (int id=0; id<nDevices; id++)
+		{
+			ctx.reset(new CudaContext(id));
+			if (ctx->GetDeviceID() >= 0) 
+				break;
+		}
+		return ctx;
 	}
 
+
+#ifdef BLAH
 	bool MeetsReq (const cudaDeviceProp& dev, const cudaDeviceProp& req)
 	{
 		if (dev.major < req.major) return false;
@@ -33,7 +37,7 @@ namespace xmatch
 		if (dev.totalGlobalMem < req.totalGlobalMem) return false;
 		return true;
 	}
-#ifdef BLAH
+
 	std::vector<int> CudaManager::Query(const cudaDeviceProp& req)
 	{
 		std::vector<int> devId;

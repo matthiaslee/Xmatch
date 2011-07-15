@@ -5,17 +5,13 @@
 #pragma once
 #ifndef CUDAMANAGER_H
 #define CUDAMANAGER_H
-
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_runtime_api.h>
-
-#include <vector>
+#include "CudaContext.h"
+//#include <vector>
 
 #pragma warning(push)
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread.hpp>
 #pragma warning(pop)
 
 
@@ -24,17 +20,18 @@ namespace xmatch
 	class CudaManager
 	{
 		boost::mutex mtx;
+		int nDevices;
 
 	public:
-		CudaManager() { };
-
-		int GetDeviceCount();
-		cudaError_t SetDevice(int id);
-		cudaError_t Reset();
+		CudaManager();
+		CudaContextPtr GetContext(void);
+		CudaContextPtr GetContext(int id);
 
 		//std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
 
-		static void Print(cudaDeviceProp devProp);
+		//static void Print(cudaDeviceProp devProp);
+
+		inline int GetDeviceCount() { return nDevices; }
 	};
 
 	typedef boost::shared_ptr<CudaManager> CudaManagerPtr;

@@ -233,7 +233,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600, verbosity));
+					sorters.create_thread(Sorter(cuman, it, segman, pmt.sr_arcsec/3600, pmt.zh_arcsec/3600, verbosity));
 				sorters.join_all();
 			}
 		}
@@ -267,7 +267,7 @@ namespace xmatch
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
 				boost::thread_group sorters;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
-					sorters.create_thread(Sorter(cuman, it, segman, pmt.zh_arcsec/3600, verbosity));
+					sorters.create_thread(Sorter(cuman, it, segman, pmt.sr_arcsec/3600, pmt.zh_arcsec/3600, verbosity));
 				sorters.join_all();
 			}
 
