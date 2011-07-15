@@ -291,8 +291,8 @@ namespace xmatch
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...
 		}
-		//cudaThreadSynchronize();
-		cudaDeviceSynchronize();
+		cudaThreadSynchronize();
+		//cudaDeviceSynchronize();
 		//if (err != cudaSuccess) LOG_ERR  << "- GPU-" << id << " " << *job << " !! Cannnot sync !!" << std::endl; 
 
 		// fetch number of matches from gpu
@@ -357,7 +357,7 @@ namespace xmatch
 			if (!outpath.empty()) 
 			{
 				LOG_DBG << "- GPU-" << id << " output to file " << outpath << std::endl; 
-				outfile.open(outpath, std::ios::out | std::ios::binary);
+				outfile.open(outpath.c_str(), std::ios::out | std::ios::binary);
 				if (!outfile.is_open())
 				{
 					LOG_ERR << "- GPU-" << id << " !! Cannot open output file !!" << std::endl;

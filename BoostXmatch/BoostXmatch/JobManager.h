@@ -33,3 +33,4 @@ namespace xmatch
 	typedef boost::shared_ptr<JobManager> JobManagerPtr;
 }
 #endif /* JOBMANAGER_H */
+

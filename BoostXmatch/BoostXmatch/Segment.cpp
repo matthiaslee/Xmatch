@@ -26,5 +26,5 @@ namespace xmatch
 		o << "SEG-" << s.mId;
 		return o;
 	}
-
 }
+

@@ -42,5 +42,5 @@ namespace xmatch
 	typedef boost::shared_ptr<Segment> SegmentPtr;
 	typedef std::vector<SegmentPtr> SegmentVec;
 }
-
 #endif /* SEGMENT_H */
+

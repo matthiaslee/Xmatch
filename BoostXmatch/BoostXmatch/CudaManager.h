@@ -32,7 +32,7 @@ namespace xmatch
 		cudaError_t SetDevice(int id);
 		cudaError_t Reset();
 
-		std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
+		//std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
 
 		static void Print(cudaDeviceProp devProp);
 	};

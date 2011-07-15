@@ -29,3 +29,4 @@ namespace xmatch
 	std::ostream& operator<< (std::ostream &rOs, const Obj &rObj);
 }
 #endif /* OBJ_H */
+

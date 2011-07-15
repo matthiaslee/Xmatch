@@ -30,3 +30,4 @@ namespace xmatch
 	typedef boost::shared_ptr<SegmentManager> SegmentManagerPtr;
 }
 #endif /* SEGMENTMANAGER_H */
+

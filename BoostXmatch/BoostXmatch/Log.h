@@ -35,5 +35,5 @@ namespace xmatch
 #define LOG_DBG2 XLOG(DEBUG2)
 #define LOG_DBG3 XLOG(DEBUG3)
 
-
 #endif /* LOG_H */
+

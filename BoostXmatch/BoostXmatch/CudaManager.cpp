@@ -5,14 +5,16 @@ namespace xmatch
 	cudaError_t CudaManager::SetDevice(int id)
 	{
 		boost::mutex::scoped_lock lock(mtx);
-		cudaError_t err = cudaSetDevice(id);
+		cudaError_t err; 
+		err = cudaSetDevice(id);
 		return err;
 	}
 
 	cudaError_t CudaManager::Reset()
 	{
 		boost::mutex::scoped_lock lock(mtx);
-		cudaError_t err = cudaDeviceReset();
+		//cudaError_t err = cudaDeviceReset();
+		cudaError_t err = cudaThreadExit();
 		return err;
 	}
 
@@ -31,7 +33,7 @@ namespace xmatch
 		if (dev.totalGlobalMem < req.totalGlobalMem) return false;
 		return true;
 	}
-
+#ifdef BLAH
 	std::vector<int> CudaManager::Query(const cudaDeviceProp& req)
 	{
 		std::vector<int> devId;
@@ -51,7 +53,7 @@ namespace xmatch
 		}
 		return devId;
 	}
-
+#endif
 	/*
 	void CudaManager::GetDeviceProperties(int id, cudaDeviceProp *prop)
 	{

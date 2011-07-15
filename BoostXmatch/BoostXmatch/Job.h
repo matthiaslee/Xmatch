@@ -9,7 +9,6 @@
 
 #include <iostream>
 
-
 namespace xmatch
 {
 	enum JobStatus { PENDING, RUNNING, FINISHED };
@@ -29,6 +28,5 @@ namespace xmatch
 	typedef boost::shared_ptr<Job> JobPtr;
 	typedef std::vector<JobPtr> JobVec;
 }
-
-
 #endif /* JOB_H */
+
