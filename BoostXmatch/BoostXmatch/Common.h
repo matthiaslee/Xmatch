@@ -1,10 +1,10 @@
 /*
- *   ID:          $Id: $
- *   Revision:    $Rev: $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #pragma once
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef COMMON_H
+#define COMMON_H
 
 #define RAD2DEG 57.295779513082323
 
@@ -14,5 +14,5 @@ namespace xmatch
 	double calc_alpha(double theta, double zh_deg, int zone);
 }
 
+#endif /* COMMON_H */
 
-#endif /* UTILS_H */

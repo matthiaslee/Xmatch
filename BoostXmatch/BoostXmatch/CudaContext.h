@@ -1,6 +1,6 @@
 /*
- *   ID:          $Id: $
- *   Revision:    $Rev: $
+ *   ID:          $Id$
+ *   Revision:    $Rev$
  */
 #pragma once
 #ifndef CUDACONTEXT_H
@@ -31,3 +31,4 @@ namespace xmatch
 	typedef boost::shared_ptr<CudaContext> CudaContextPtr;
 }
 #endif /* CUDACONTEXT_H */
+

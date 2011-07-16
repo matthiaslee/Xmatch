@@ -3,8 +3,8 @@
 NVCC	=	nvcc -m 64 -gencode=arch=compute_20,code=\"sm_20,compute_20\"
 #NVCC	=	nvcc -m 64 -arch sm_20
 CCXX	= 	g++ -O2
-LD		= 	g++ 
-CP		=   cp
+LD		= 	g++
+AR		= 	ar
 RM		=   rm -f
 
 #THRUST_DIR = /home/budavari/thrust-v1.3.0
@@ -20,25 +20,41 @@ BOOST_LIB = \
 
 CCFLAGS =	${INCLUDE} 
 INCLUDE =	-I/usr/site/cuda/include
-LDLIBS  =	-L${BOOST_DIR}/stage/lib ${BOOST_LIB} -lpthread \
-			-L/usr/site/cuda/lib64 -lcudart
+LDLIBS  =	-L. -l${LIBNAME} \
+			-L${BOOST_DIR}/stage/lib ${BOOST_LIB} -lpthread \
+			-L/usr/site/cuda/lib64 -lcudart 
 
-OBJS 	= 	Obj.o \
+ARFLAGS = 	-rcls
+
+LIBNAME = 	Xmatch
+LIBOBJS = 	Log.o \
+			CudaContext.o \
+			CudaManager.o \
+			Obj.o \
 			Segment.o \
 			SegmentManager.o \
 			Job.o \
 			JobManager.o \
+			Common.o \
 			Sorter.o \
 			Worker.o \
-			Log.o \
-			CudaManager.o
+
+LINKLIB = 	lib${LIBNAME}.a
 			
 
 # --- Targets ---
 
-#BoostXmatch: BoostXmatch.o Log.o CudaManager.o Obj.o Segment.o SegmentManager.o Job.o JobManager.o Sorter.o Worker.o
-BoostXmatch: BoostXmatch.o ${OBJS}
+all: BoostXmatch
+lib: ${LINKLIB}
+
+BoostXmatch: BoostXmatch.o ${LINKLIB}
 	${LD} -o $@ $< ${OBJS} ${LDLIBS}
+
+BoostXmatch_old: BoostXmatch.o ${OBJS}
+	${LD} -o $@ $< ${OBJS} ${LDLIBS}
+
+${LINKLIB} : ${LIBOBJS}
+	${AR} ${ARFLAGS} $@ $?
 
 clean :
 	- ${RM} *.x *.o
