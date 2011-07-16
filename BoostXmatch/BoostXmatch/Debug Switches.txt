@@ -1,0 +1,12 @@
+
+-v9 -o_x -t3 -n2020 $(SolutionDir)\..\data\test.idradec $(SolutionDir)\..\data\test.idradec
+
+-v9 -o_x -t1 -n10000 $(SolutionDir)\..\data\test.idradec $(SolutionDir)\..\data\test.idradec
+
+-v9 -o_x -t3 -n35211000 \tamas\Data\dr7mode1radec-150901200.bin \tamas\Data\dr7mode1radec-150901200.bin
+
+-v9 -o_x -t1 -n35211000 \tamas\Data\dr7mode1radec-150901200.bin \tamas\Data\dr7mode1radec-150901200.bin
+
+
+This gives an exception sometimes for 3 GPUS when "Sorting segments" but works with 1/2 or if -v4 
+-v3 -o_x -t3 -n35211000 \tamas\Data\dr7mode1radec-150901200.bin \tamas\Data\dr7mode1radec-150901200.bin 
