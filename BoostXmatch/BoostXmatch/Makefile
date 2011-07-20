@@ -22,11 +22,11 @@ CCFLAGS =	${INCLUDE}
 INCLUDE =	-I/usr/site/cuda/include
 LDLIBS  =	-L. -l${LIBNAME} \
 			-L${BOOST_DIR}/stage/lib ${BOOST_LIB} -lpthread \
-			-L/usr/site/cuda/lib64 -lcudart 
+			-L/usr/site/cuda/lib64 -lcudart -lcuda
 
-ARFLAGS = 	-rcls
+ARFLAGS = 	-rcs
 
-LIBNAME = 	Xmatch
+LIBNAME = 	xmatch
 LIBOBJS = 	Log.o \
 			CudaContext.o \
 			CudaManager.o \
