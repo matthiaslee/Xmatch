@@ -323,16 +323,19 @@ namespace xmatch
 
 	void Worker::operator()()
 	{   
-		CudaContextPtr ctx = cuman->GetContext();
-		if (ctx->GetDeviceID() < 0) 
-		{ 
-			LOG_ERR << "- GPU-" << id << " !! Cannot get CUDA context !!" << std::endl; 
-			return; 
-		}
-
 		std::ofstream outfile;
 		try  
 		{
+			DeviceIdPtr dev = cuman->NextDevice();
+			this->id = *dev;
+			CudaContextPtr ctx(new CudaContext(id));
+
+			if (ctx->GetDeviceID() != id) 
+			{ 
+				LOG_ERR << "- Thread-" << id << " !! Cannot get CUDA context !!" << std::endl; 
+				return; 
+			}
+
 			// open output file
 			if (!outpath.empty()) 
 			{

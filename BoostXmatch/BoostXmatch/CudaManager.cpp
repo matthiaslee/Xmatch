@@ -1,32 +1,38 @@
 #include "CudaManager.h"
-
 #include <cuda_runtime.h>
 
 namespace xmatch
 {
-	CudaManager::CudaManager() 
+	CudaManager::CudaManager() : dev()
 	{
+		int nDevices;
 		cudaError_t err = cudaGetDeviceCount(&nDevices);
 		if (err != cudaSuccess) nDevices = 0;
+		for (int i=0; i<nDevices; i++)
+		{
+			CudaContextPtr ctx(new CudaContext(i));
+			if (i == ctx->GetDeviceID())
+			{				
+				DeviceIdPtr p(new int[1]);
+				*p = i;
+				dev.push_back(p);
+			}
+		}
 	}
 
-	CudaContextPtr CudaManager::GetContext(int id)
-	{
-		CudaContext *ctx = new CudaContext(id);
-		return CudaContextPtr(ctx);
-	}
-
-	CudaContextPtr CudaManager::GetContext()
+	DeviceIdPtr CudaManager::NextDevice()
 	{
 		boost::mutex::scoped_lock lock(mtx);
-		CudaContextPtr ctx;
-		for (int id=0; id<nDevices; id++)
+		DeviceIdPtr id;
+		for (int i=0; i<dev.size(); i++)
 		{
-			ctx.reset(new CudaContext(id));
-			if (ctx->GetDeviceID() >= 0) 
+			if (dev[i].unique())
+			{
+				id = dev[i];
 				break;
+			}
 		}
-		return ctx;
+		return id;
 	}
 
 

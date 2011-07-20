@@ -11,7 +11,7 @@ namespace xmatch
 		}
 	}
 
-	CudaContext::~CudaContext(void)
+	CudaContext::~CudaContext()
 	{
 		CUresult cuResult = cuCtxDestroy(ctx);
 	}

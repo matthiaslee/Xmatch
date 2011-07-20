@@ -182,13 +182,15 @@ namespace xmatch
 	{   
 		try  
 		{
-			CudaContextPtr ctx = cuman->GetContext();
-			if (ctx->GetDeviceID() < 0) 
+			DeviceIdPtr dev = cuman->NextDevice();
+			this->id = *dev;
+			CudaContextPtr ctx(new CudaContext(id));
+
+			if (ctx->GetDeviceID() != id) 
 			{ 
 				LOG_ERR << "- Thread-" << id << " !! Cannot get CUDA context !!" << std::endl; 
 				return; 
 			}
-			id = ctx->GetDeviceID();
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  

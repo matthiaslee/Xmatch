@@ -6,7 +6,6 @@
 #ifndef CUDAMANAGER_H
 #define CUDAMANAGER_H
 #include "CudaContext.h"
-
 #include <vector>
 
 #pragma warning(push)
@@ -18,20 +17,21 @@
 
 namespace xmatch
 {
+	typedef boost::shared_ptr<int> DeviceIdPtr;
+
 	class CudaManager
 	{
 		boost::mutex mtx;
-		std::vector<int> devId;
+		std::vector<DeviceIdPtr> dev;
 
 	public:
 		CudaManager();
-		CudaContextPtr GetContext(void);
-		CudaContextPtr GetContext(int id);
+		DeviceIdPtr NextDevice();
 
 		//std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
 		//static void Print(cudaDeviceProp devProp);
 
-		inline int GetDeviceCount() { return devId.size(); }
+		inline int GetDeviceCount() { return (int)dev.size(); }
 	};
 
 	typedef boost::shared_ptr<CudaManager> CudaManagerPtr;
