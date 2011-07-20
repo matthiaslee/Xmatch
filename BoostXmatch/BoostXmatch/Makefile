@@ -44,26 +44,23 @@ LINKLIB = 	lib${LIBNAME}.a
 
 # --- Targets ---
 
-all: BoostXmatch
+all: BoostXmatch.x
 lib: ${LINKLIB}
 
-BoostXmatch: BoostXmatch.o ${LINKLIB}
-	${LD} -o $@ $< ${OBJS} ${LDLIBS}
-
-BoostXmatch_old: BoostXmatch.o ${OBJS}
+BoostXmatch.x: BoostXmatch.o lib
 	${LD} -o $@ $< ${OBJS} ${LDLIBS}
 
 ${LINKLIB} : ${LIBOBJS}
 	${AR} ${ARFLAGS} $@ $?
 
 clean :
-	- ${RM} *.x *.o
+	- ${RM} *.x *.o lib*.a
 
 
 # --- Suffix Rules ---
 
 .SUFFIXES:
-.SUFFIXES: .x .o .cpp .cu
+.SUFFIXES: .cpp .cu .o
 
 .cu.o:
 	${NVCC} -c $< ${CCFLAGS}
@@ -71,5 +68,3 @@ clean :
 .cpp.o:
 	${CCXX} -c $< ${CCFLAGS}
 
-.o.x: 
-	${LD} -o $@ ${$@_OBJ} ${LDLIBS}
