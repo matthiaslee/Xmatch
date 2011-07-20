@@ -1,6 +1,5 @@
 #include "CudaContext.h"
 
-
 namespace xmatch
 {
 	CudaContext::CudaContext(int id) : id(id)
@@ -16,10 +15,5 @@ namespace xmatch
 	{
 		CUresult cuResult = cuCtxDestroy(ctx);
 	}
-
-	//int CudaContext::GetDeviceID(void)
-	//{
-	//	return id;
-	//}
 }
 
