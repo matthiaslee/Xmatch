@@ -18,6 +18,7 @@ namespace xmatch
 
 	CudaContextPtr CudaManager::GetContext()
 	{
+		boost::mutex::scoped_lock lock(mtx);
 		CudaContextPtr ctx;
 		for (int id=0; id<nDevices; id++)
 		{
