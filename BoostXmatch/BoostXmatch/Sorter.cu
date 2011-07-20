@@ -185,9 +185,10 @@ namespace xmatch
 			CudaContextPtr ctx = cuman->GetContext();
 			if (ctx->GetDeviceID() < 0) 
 			{ 
-				LOG_ERR << "- GPU-" << id << " !! Cannot get CUDA context !!" << std::endl; 
+				LOG_ERR << "- Thread-" << id << " !! Cannot get CUDA context !!" << std::endl; 
 				return; 
 			}
+			id = ctx->GetDeviceID();
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  
