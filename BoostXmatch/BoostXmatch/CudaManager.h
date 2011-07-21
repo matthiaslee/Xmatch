@@ -5,33 +5,32 @@
 #pragma once
 #ifndef CUDAMANAGER_H
 #define CUDAMANAGER_H
-#include "CudaContext.h"
 #include <vector>
 
 #pragma warning(push)
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
-#include <boost/shared_ptr.hpp>
+#include <boost/shared_array.hpp>
 #include <boost/thread.hpp>
 #pragma warning(pop)
 
 
 namespace xmatch
 {
-	typedef boost::shared_ptr<int> DeviceIdPtr;
-
 	class CudaManager
 	{
 		boost::mutex mtx;
-		std::vector<DeviceIdPtr> dev;
+		boost::shared_array<bool> available;
+		int nDevices;
 
 	public:
 		CudaManager();
-		DeviceIdPtr NextDevice();
+		int NextDevice();
+		void Release(int id);
 
 		//std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
 		//static void Print(cudaDeviceProp devProp);
 
-		inline int GetDeviceCount() { return (int)dev.size(); }
+		inline int GetDeviceCount() { return nDevices; }
 	};
 
 	typedef boost::shared_ptr<CudaManager> CudaManagerPtr;

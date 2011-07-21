@@ -5,6 +5,7 @@
 #pragma once
 #ifndef CUDACONTEXT_H
 #define CUDACONTEXT_H
+#include "CudaManager.h"
 
 #include <cuda.h>
 
@@ -18,12 +19,13 @@ namespace xmatch
 {	
 	class CudaContext
 	{
+		CudaManagerPtr cuman;
 		CUcontext ctx;
 		int id;
 
 	public:
-		CudaContext(int id);
-		~CudaContext(void);
+		CudaContext(CudaManagerPtr cuman);
+		~CudaContext();
 
 		int GetDeviceID() { return id; }
 	};

@@ -1,40 +1,49 @@
 #include "CudaManager.h"
 #include <cuda_runtime.h>
+#include <cuda.h>
 
 namespace xmatch
 {
-	CudaManager::CudaManager() : dev()
+	CudaManager::CudaManager() : available()
 	{
-		int nDevices;
-		cudaError_t err = cudaGetDeviceCount(&nDevices);
-		if (err != cudaSuccess) nDevices = 0;
+		CUresult error;
+   		error = cuInit(0); // has to be the first call to the driver api
+		error = cuDeviceGetCount(&nDevices);
+		if (error != CUDA_SUCCESS) nDevices = 0;
+		else available.reset(new bool[nDevices]);
+
 		for (int i=0; i<nDevices; i++)
 		{
-			CudaContextPtr ctx(new CudaContext(i));
-			if (i == ctx->GetDeviceID())
-			{				
-				DeviceIdPtr p(new int[1]);
-				*p = i;
-				dev.push_back(p);
-			}
+			// Get handle for device 0
+			CUdevice cuDevice;
+			error = cuDeviceGet(&cuDevice, i);
+			// Create context
+			CUcontext cuContext;
+			error = cuCtxCreate(&cuContext, 0, cuDevice);
+			available[i] = (error == CUDA_SUCCESS);
+			error = cuCtxDestroy(cuContext);
 		}
 	}
 
-	DeviceIdPtr CudaManager::NextDevice()
+	int CudaManager::NextDevice()
 	{
 		boost::mutex::scoped_lock lock(mtx);
-		DeviceIdPtr id;
-		for (int i=0; i<dev.size(); i++)
+		for (int i=0; i<nDevices; i++)
 		{
-			if (dev[i].unique())
+			if (available[i])
 			{
-				id = dev[i];
-				break;
+				available[i] = false;
+				return i;
 			}
 		}
-		return id;
+		return -1;
 	}
 
+	void CudaManager::Release(int id)
+	{
+		boost::mutex::scoped_lock lock(mtx);
+		available[id] = true;
+	}
 
 #ifdef BLAH
 	bool MeetsReq (const cudaDeviceProp& dev, const cudaDeviceProp& req)
@@ -65,12 +74,6 @@ namespace xmatch
 		return devId;
 	}
 #endif
-	/*
-	void CudaManager::GetDeviceProperties(int id, cudaDeviceProp *prop)
-	{
-		cudaDe
-	}
-	*/
 
 	// Print device properties
 	void Print(cudaDeviceProp devProp)

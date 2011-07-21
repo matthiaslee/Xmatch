@@ -1,6 +1,7 @@
 #include "Worker.h"
 #include "Common.h"
 #include "Log.h"
+#include "CudaContext.h"
 
 #include <fstream>
 
@@ -326,15 +327,14 @@ namespace xmatch
 		std::ofstream outfile;
 		try  
 		{
-			DeviceIdPtr dev = cuman->NextDevice();
-			this->id = *dev;
-			CudaContextPtr ctx(new CudaContext(id));
+			CudaContextPtr ctx(new CudaContext(cuman));
 
-			if (ctx->GetDeviceID() != id) 
+			if (ctx->GetDeviceID() < 0) 
 			{ 
 				LOG_ERR << "- Thread-" << id << " !! Cannot get CUDA context !!" << std::endl; 
 				return; 
-			}
+			}			
+			id = ctx->GetDeviceID();
 
 			// open output file
 			if (!outpath.empty()) 

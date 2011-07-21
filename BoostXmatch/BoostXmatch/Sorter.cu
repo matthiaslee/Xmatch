@@ -1,6 +1,7 @@
 #include "Sorter.h"
 #include "Common.h"
 #include "Log.h"
+#include "CudaContext.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4996)      // Thrust uses strerror
@@ -182,15 +183,13 @@ namespace xmatch
 	{   
 		try  
 		{
-			DeviceIdPtr dev = cuman->NextDevice();
-			this->id = *dev;
-			CudaContextPtr ctx(new CudaContext(id));
-
-			if (ctx->GetDeviceID() != id) 
+			CudaContextPtr ctx(new CudaContext(cuman));
+			if (ctx->GetDeviceID() < 0) 
 			{ 
 				LOG_ERR << "- Thread-" << id << " !! Cannot get CUDA context !!" << std::endl; 
 				return; 
 			}
+			id = ctx->GetDeviceID();
 
 			bool   keepProcessing = true;
 			while (keepProcessing)  
