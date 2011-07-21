@@ -21,7 +21,8 @@ namespace xmatch
 			CUcontext cuContext;
 			error = cuCtxCreate(&cuContext, 0, cuDevice);
 			available[i] = (error == CUDA_SUCCESS);
-			error = cuCtxDestroy(cuContext);
+			if (available[i])
+				error = cuCtxDestroy(cuContext);
 		}
 	}
 
