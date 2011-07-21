@@ -41,8 +41,11 @@ namespace xmatch
 
 	void CudaManager::Release(int id)
 	{
-		boost::mutex::scoped_lock lock(mtx);
-		available[id] = true;
+		if (id>=0 && id<nDevices)
+		{
+			boost::mutex::scoped_lock lock(mtx);
+			available[id] = true;
+		}
 	}
 
 #ifdef BLAH

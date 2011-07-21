@@ -20,8 +20,11 @@ namespace xmatch
 
 	CudaContext::~CudaContext()
 	{
-		cuman->Release(id);
-		CUresult cuResult = cuCtxDestroy(ctx);
+		if (id >= 0)
+		{
+			cuman->Release(id);
+			CUresult cuResult = cuCtxDestroy(ctx);
+		}
 	}
 }
 
