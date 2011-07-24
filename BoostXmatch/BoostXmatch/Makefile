@@ -1,8 +1,7 @@
 # export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/budavari/boost-trunk/stage/lib
 
 NVCC	=	nvcc -m 64 -gencode=arch=compute_20,code=\"sm_20,compute_20\"
-#NVCC	=	nvcc -m 64 -arch sm_20
-CCXX	= 	g++ -O2
+CCXX	= 	g++ -O6
 LD		= 	g++
 AR		= 	ar
 RM		=   rm -f
