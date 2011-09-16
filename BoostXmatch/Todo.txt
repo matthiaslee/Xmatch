@@ -6,7 +6,7 @@
  - ObjID copy on GPU?
  - Memory limit review
  - R.A. wraparound
- - Linux Makefile (CMake?)
+ - GPU alloc/management
 
 
 Notes:
