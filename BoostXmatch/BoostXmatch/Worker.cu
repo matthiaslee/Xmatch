@@ -238,6 +238,11 @@ namespace xmatch
 		sr_dist2 *= sr_dist2;
 
 		LOG_TIM << "- GPU-" << id << " " << *job << " kernel launches" << std::endl;
+		
+		cudaEvent_t start_event, stop_event;
+		cudaEventCreate(&start_event);
+		cudaEventCreate(&stop_event);
+		cudaEventRecord(start_event, 0);
 
 		// loop
 		for (int zid1 = 0; zid1 < n_zones; zid1++)
@@ -265,16 +270,24 @@ namespace xmatch
 
 				dim3 dimBlock(16, THREADS_PER_BLOCK / 16);
 				dim3 dimGrid( (n1+dimBlock.x-1) / dimBlock.x, 
-							  (n2+dimBlock.y-1) / dimBlock.y );  				
+							  (n2+dimBlock.y-1) / dimBlock.y );  		
+				
 				// launch
 				xmatch_kernel <<<dimGrid,dimBlock>>> ( p1_radec, i1s, i1e,  p2_radec, i2s, i2e, 
 					sr_rad, alpha_rad, sr_dist2,  p_match_idx, n_match_alloc, p_match_num);
+				
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...
 		}
 		cudaThreadSynchronize();
 		//cudaDeviceSynchronize();
 		//if (err != cudaSuccess) LOG_ERR  << "- GPU-" << id << " " << *job << " !! Cannnot sync !!" << std::endl; 
+		
+		cudaEventRecord(stop_event, 0);
+		cudaEventSynchronize(stop_event);
+		float calc_time;
+		cudaEventElapsedTime(&calc_time, start_event, stop_event);
+		LOG_PRG << "time taken: " << calc_time << "ms" << std::endl;
 
 		// fetch number of matches from gpu
 		unsigned int match_num = d_match_num[0];
