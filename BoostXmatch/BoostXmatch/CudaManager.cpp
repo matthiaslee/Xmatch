@@ -49,6 +49,20 @@ namespace xmatch
 			available[id] = true;
 		}
 	}
+	
+	void CudaManager::BlacklistDevice(int id)
+	{
+		// FORCE blacklist of display GPU
+		cudaDeviceProp prop;
+		for (int i=0; i<nDevices; i++)
+		{
+		  cudaGetDeviceProperties(&prop,i);
+		  printf("%d Name:                          %s\n", i, prop.name);
+		}
+		std::cout << "BLACKLISTED Device "<<id<<"\n";
+		boost::mutex::scoped_lock lock(mtx);
+		available[id] = false;
+	}
 
 #ifdef BLAH
 	bool MeetsReq (const cudaDeviceProp& dev, const cudaDeviceProp& req)

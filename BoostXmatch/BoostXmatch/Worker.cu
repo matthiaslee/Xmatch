@@ -100,7 +100,7 @@ namespace xmatch
 
 		// count matches in the block
 		int count = __syncthreads_count(found);	
-
+		
 		// quit if none found
 		if (count < 1) 
 			return;
@@ -129,6 +129,7 @@ namespace xmatch
 		int pout = 0, pin = 1;
 		s_tmp[tid] = (s_found[tid] ? 0 : 1);
 		__syncthreads();
+
 		for (int offset = 1; offset < n; offset *= 2)
 		{
 			pout = 1 - pout; // swap double buffer indices
@@ -207,24 +208,44 @@ namespace xmatch
 		{
 			m_idx[index + tid] = s_idx[tid];
 		}
-
+		
 	}
 
 	void Worker::Match(JobPtr job, std::ofstream& outfile)
 	{
 		LOG_TIM << "- GPU-" << id << " " << *job << " copying to device" << std::endl;
 		// copy to gpu  -- shd look 1st if already there...
-		thrust::device_vector<dbl2> d1_radec = job->segA->vRadec;
-		thrust::device_vector<dbl2> d2_radec = job->segB->vRadec;
+		dbl2* p1_radec=NULL;
+		dbl2* p2_radec=NULL;
+		thrust::device_vector<dbl2> d1_radec(0);
+		thrust::device_vector<dbl2> d2_radec(0);
+		
+		if(oldjob==NULL || oldjob->segA!=job->segA){
+		  d1_radec= job->segA->vRadec;
+		  p1_radec = thrust::raw_pointer_cast(&d1_radec[0]);
+
+		  job->ptrA = p1_radec;
+		} else {
+		  std::cout << "not reloading segA" << std::endl;
+		  p1_radec = oldjob->ptrA;
 	
+		}
+		if(oldjob==NULL || oldjob->segB!=job->segB ){
+		  d2_radec = job->segB->vRadec;
+		  p2_radec = thrust::raw_pointer_cast(&d2_radec[0]);
+
+		  job->ptrB = p2_radec;
+		} else {
+		  std::cout << "not reloading segB" << std::endl;
+		  p2_radec = oldjob->ptrB;
+		}
+
 		// xmatch alloc limit -- hack for now...
-		unsigned int n_match_alloc = 2 * std::max (d1_radec.size(), d2_radec.size());
+		unsigned int n_match_alloc = 2 * std::max (job->segA->mNum, job->segB->mNum);
+		
 		thrust::device_vector<uint2> d_match_idx(n_match_alloc);
 		thrust::device_vector<unsigned int> d_match_num(1);
 
-		// pointers
-		dbl2* p1_radec = thrust::raw_pointer_cast(&d1_radec[0]);
-		dbl2* p2_radec = thrust::raw_pointer_cast(&d2_radec[0]);
 		unsigned int* p_match_num = thrust::raw_pointer_cast(&d_match_num[0]);
 		uint2* p_match_idx = thrust::raw_pointer_cast(&d_match_idx[0]);
 
@@ -270,7 +291,7 @@ namespace xmatch
 
 				dim3 dimBlock(16, THREADS_PER_BLOCK / 16);
 				dim3 dimGrid( (n1+dimBlock.x-1) / dimBlock.x, 
-							  (n2+dimBlock.y-1) / dimBlock.y );  		
+							  (n2+dimBlock.y-1) / dimBlock.y );
 				
 				// launch
 				xmatch_kernel <<<dimGrid,dimBlock>>> ( p1_radec, i1s, i1e,  p2_radec, i2s, i2e, 
@@ -287,15 +308,21 @@ namespace xmatch
 		cudaEventSynchronize(stop_event);
 		float calc_time;
 		cudaEventElapsedTime(&calc_time, start_event, stop_event);
-		LOG_PRG << "time taken: " << calc_time << "ms" << std::endl;
+		LOG_PRG << ">>>>>>>>>>time taken: " << calc_time << "ms" << std::endl;
 
 		// fetch number of matches from gpu
 		unsigned int match_num = d_match_num[0];
 		LOG_TIM << "- GPU-" << id << " " << *job << " # " << match_num << std::endl;
-
+		
+		cudaEventRecord(start_event, 0);
 		// copy indices to host
 		thrust::host_vector<uint2> h_match_idx = d_match_idx;
-
+		cudaEventRecord(stop_event, 0);
+		cudaEventSynchronize(stop_event);
+		float copy_time;
+		cudaEventElapsedTime(&copy_time, start_event, stop_event);
+		LOG_PRG << ">>>>>>>>>>copy_time taken: " << copy_time << "ms" << std::endl;
+		
 		// check if all matches fit in mem - hack guard
 		if (n_match_alloc < match_num) 
 		{
@@ -320,6 +347,7 @@ namespace xmatch
 			// write binary
 			if (outfile.is_open())
 			{
+				cudaEventRecord(start_event, 0);
 				int64_t objid;
 				for (int i=0; i<n_out; i++)
 				{
@@ -330,6 +358,11 @@ namespace xmatch
 					outfile.write((char*)&objid, sizeof(int64_t));
 				}
 				//outfile.flush();
+				cudaEventRecord(stop_event, 0);
+				cudaEventSynchronize(stop_event);
+				float lookup_time;
+				cudaEventElapsedTime(&lookup_time, start_event, stop_event);
+				LOG_PRG << ">>>>>>>>>>lookup_time taken: " << lookup_time << "ms" << std::endl;
 			}
 		}
 		LOG_PRG << "- GPU-" << id << " " << *job << " done" << std::endl;
