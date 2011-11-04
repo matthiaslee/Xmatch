@@ -13,7 +13,6 @@
 #pragma warning(disable: 4996)      // Thrust's use of strerror
 #pragma warning(disable: 4251)      // STL class exports
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
-//#include <thrust/version.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
@@ -21,6 +20,7 @@
 
 
 #define THREADS_PER_BLOCK 256
+#define M_PI2 6.2831853071795864769252867665590057683943387987502116419498
 
 
 namespace xmatch
@@ -77,24 +77,49 @@ namespace xmatch
 		uint2 idx = make_uint2(i1,i2);
 		s_idx[tid] = idx;
 
-		// test
 		bool found = false;
 		if (i1 < i1e && i2 < i2e) 
 		{
 			dbl2 radec1 = p_radec1[i1];
 			dbl2 radec2 = p_radec2[i2];
-
-			if (abs(radec1.x-radec2.x) < alpha_rad && abs(radec1.y-radec2.y) < sr_rad) 
-			{
-				double x,y,z, x2,y2,z2, dist2;
-				radec2xyz(radec1,&x,&y,&z);
-				radec2xyz(radec2,&x2,&y2,&z2);
-				x -= x2;
-				y -= y2;
-				z -= z2;
-				dist2 = x*x + y*y + z*z;
-				found = (dist2 < sr_dist2 ? 1 : 0);
-			}
+			
+			// secondary ifs for dealing with RA wraparound
+			if(abs(radec1.y-radec2.y) < sr_rad) {
+			  if (abs(radec1.x-radec2.x) < alpha_rad) {
+				  double x,y,z, x2,y2,z2, dist2;
+				  radec2xyz(radec1,&x,&y,&z);
+				  radec2xyz(radec2,&x2,&y2,&z2);
+				  x -= x2;
+				  y -= y2;
+				  z -= z2;
+				  dist2 = x*x + y*y + z*z;
+				  found = (dist2 < sr_dist2 ? 1 : 0);
+			     } else if (abs(radec1.x-radec2.x-M_PI2) < alpha_rad) {
+				  double x,y,z, x2,y2,z2, dist2;
+				  radec2xyz(radec1,&x,&y,&z);
+				  // pulls the second point into the negative for direct comparison
+				  radec2.x-=M_PI2;
+				  radec2xyz(radec2,&x2,&y2,&z2);
+				  x -= x2;
+				  // accounts for the negative from above
+				  y -= abs(y2);
+				  z -= z2;
+				  dist2 = x*x + y*y + z*z;
+				  found = (dist2 < sr_dist2 ? 1 : 0);
+			     } else if (abs(radec1.x-radec2.x+M_PI2) < alpha_rad) {
+				  double x,y,z, x2,y2,z2, dist2;
+				  radec2xyz(radec1,&x,&y,&z);
+				  // pulls the second point into the negative for direct comparison
+				  radec2.x+=M_PI2;
+				  radec2xyz(radec2,&x2,&y2,&z2);
+				  x -= x2;
+				  // accounts for the negative from above
+				  y -= abs(y2);
+				  z -= z2;
+				  dist2 = x*x + y*y + z*z;
+				  found = (dist2 < sr_dist2 ? 1 : 0);
+			     }
+			  }
 		}
 		s_found[tid] = found;
 
@@ -226,7 +251,7 @@ namespace xmatch
 
 		  job->ptrA = p1_radec;
 		} else {
-		  std::cout << "not reloading segA" << std::endl;
+		  LOG_TIM << "not reloading segA" << std::endl;
 		  p1_radec = oldjob->ptrA;
 	
 		}
@@ -236,12 +261,17 @@ namespace xmatch
 
 		  job->ptrB = p2_radec;
 		} else {
-		  std::cout << "not reloading segB" << std::endl;
+		  LOG_TIM << "not reloading segB" << std::endl;
 		  p2_radec = oldjob->ptrB;
 		}
 
-		// xmatch alloc limit -- hack for now...
-		unsigned int n_match_alloc = 2 * std::max (job->segA->mNum, job->segB->mNum);
+		// xmatch alloc limit -- configureable with --maxout <n>
+		unsigned int n_match_alloc;
+		if(maxout == 0) {
+		  n_match_alloc = 2 * std::max (job->segA->mNum, job->segB->mNum);
+		} else {
+		  n_match_alloc = maxout;
+		}
 		
 		thrust::device_vector<uint2> d_match_idx(n_match_alloc);
 		thrust::device_vector<unsigned int> d_match_num(1);
@@ -260,10 +290,13 @@ namespace xmatch
 
 		LOG_TIM << "- GPU-" << id << " " << *job << " kernel launches" << std::endl;
 		
+		
+		// Timer setup
 		cudaEvent_t start_event, stop_event;
 		cudaEventCreate(&start_event);
 		cudaEventCreate(&stop_event);
 		cudaEventRecord(start_event, 0);
+		
 
 		// loop
 		for (int zid1 = 0; zid1 < n_zones; zid1++)
@@ -276,8 +309,6 @@ namespace xmatch
 
 			double alpha_rad = calc_alpha(sr_deg, zh_deg, zid1); // in radians
 
-			// deal with RA wraparound here or after the kernel launch
-
 			int zid2start = std::max(0,zid1-nz);
 			int zid2end = std::min(n_zones-1,zid1+nz);
 
@@ -288,7 +319,7 @@ namespace xmatch
 				int n2 = i2e - i2s;
 
 				if (n2 < 1) continue;
-
+				
 				dim3 dimBlock(16, THREADS_PER_BLOCK / 16);
 				dim3 dimGrid( (n1+dimBlock.x-1) / dimBlock.x, 
 							  (n2+dimBlock.y-1) / dimBlock.y );
@@ -300,39 +331,36 @@ namespace xmatch
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...
 		}
-		cudaThreadSynchronize();
-		//cudaDeviceSynchronize();
-		//if (err != cudaSuccess) LOG_ERR  << "- GPU-" << id << " " << *job << " !! Cannnot sync !!" << std::endl; 
+		cudaDeviceSynchronize();
 		
+		// Time Kernel execution
 		cudaEventRecord(stop_event, 0);
 		cudaEventSynchronize(stop_event);
 		float calc_time;
 		cudaEventElapsedTime(&calc_time, start_event, stop_event);
-		LOG_PRG << ">>>>>>>>>>time taken: " << calc_time << "ms" << std::endl;
+		LOG_PRG << "Job run-length: " << calc_time << "ms" << std::endl;
+		
 
 		// fetch number of matches from gpu
 		unsigned int match_num = d_match_num[0];
 		LOG_TIM << "- GPU-" << id << " " << *job << " # " << match_num << std::endl;
 		
-		cudaEventRecord(start_event, 0);
 		// copy indices to host
 		thrust::host_vector<uint2> h_match_idx = d_match_idx;
-		cudaEventRecord(stop_event, 0);
-		cudaEventSynchronize(stop_event);
-		float copy_time;
-		cudaEventElapsedTime(&copy_time, start_event, stop_event);
-		LOG_PRG << ">>>>>>>>>>copy_time taken: " << copy_time << "ms" << std::endl;
 		
 		// check if all matches fit in mem - hack guard
 		if (n_match_alloc < match_num) 
 		{
 			LOG_ERR << "- GPU-" << id << " " << *job << " !! Truncated output !!" << std::endl;
 		}
-
-		// dump 
+		
+		// parseable output summarizing how well the output fit in the allocated array
+		// print percentage?
+		LOG_TIM << "- <matches>" << match_num << "/" << n_match_alloc <<":"<<id<<":"<<*job<< "</matches>"<< std::endl;
+		// dump results to file 
 		{
 			int n_out = std::min(n_match_alloc, match_num);
-			// debug to screen: top 10
+			// at high verbosity to screen: top 10
 			if (true)
 			{
 				int n_top = std::min(n_out,10);
@@ -347,7 +375,6 @@ namespace xmatch
 			// write binary
 			if (outfile.is_open())
 			{
-				cudaEventRecord(start_event, 0);
 				int64_t objid;
 				for (int i=0; i<n_out; i++)
 				{
@@ -357,12 +384,7 @@ namespace xmatch
 					objid = job->segB->vId[idx.y];
 					outfile.write((char*)&objid, sizeof(int64_t));
 				}
-				//outfile.flush();
-				cudaEventRecord(stop_event, 0);
-				cudaEventSynchronize(stop_event);
-				float lookup_time;
-				cudaEventElapsedTime(&lookup_time, start_event, stop_event);
-				LOG_PRG << ">>>>>>>>>>lookup_time taken: " << lookup_time << "ms" << std::endl;
+
 			}
 		}
 		LOG_PRG << "- GPU-" << id << " " << *job << " done" << std::endl;

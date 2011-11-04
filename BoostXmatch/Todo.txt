@@ -1,12 +1,13 @@
 
  TODO:
 ------
- - Only copy to GPU, if needed
  - Optimize output to files
- - ObjID copy on GPU?
- - Memory limit review
- - R.A. wraparound
- - GPU alloc/management
+ - obj segment size
+ - check defaults
+ 	- nobject
+ 	- maxout --> defaults to jobA*jobB
+ - add conditional for timing
+ - directories for output
 
 
 Notes:
@@ -14,3 +15,14 @@ Notes:
 To build Boost for x64, do this:
 .\bootstrap.bat
 .\b2 --toolset=msvc-10.0 address-model=64
+
+
+Questions:
+----
+- Should I be throwing a verbose warning if more results are returned then allocated?
+- make Blacklisting and option? hidden feature?
+
+
+Version 2.0 Feature list
+----
+- Dynamically adjust the job size and therefore memory use to the card we are running on

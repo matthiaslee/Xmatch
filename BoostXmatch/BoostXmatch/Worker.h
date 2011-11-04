@@ -16,14 +16,15 @@ namespace xmatch
 		CudaManagerPtr cuman;
 		JobManagerPtr jobman;
 		JobPtr oldjob;
+		uint32_t maxout;
 		std::string outpath;
 		int verbosity;
 
 		void Match(JobPtr job, std::ofstream& ofs);
 
 	public:
-		Worker(CudaManagerPtr cuman, uint32_t id, JobManagerPtr jobman, std::string outpath, int verbosity) 
-			: cuman(cuman), id(id), jobman(jobman), outpath(outpath), verbosity(verbosity), oldjob((Job*)NULL) 
+		Worker(CudaManagerPtr cuman, uint32_t id, JobManagerPtr jobman, std::string outpath, uint32_t maxout, int verbosity) 
+			: cuman(cuman), id(id), jobman(jobman), outpath(outpath), maxout(maxout), verbosity(verbosity), oldjob((Job*)NULL) 
 		{ }
 
 		void operator()();		

@@ -45,6 +45,12 @@ THE SOFTWARE.
 #include <boost/program_options.hpp>
 #pragma warning(pop)
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+static const std::string slash="\\";
+#else
+static const std::string slash="/";
+#endif
+
 namespace fs = boost::filesystem;
 namespace po = boost::program_options;
 
@@ -83,7 +89,7 @@ namespace xmatch
 
 	struct Parameter
 	{
-		uint32_t num_threads, num_obj;
+		uint32_t num_threads, num_obj, maxout;
 		double zh_arcsec, sr_arcsec;
 		FileDesc fileA, fileB;
 		fs::path outpath;
@@ -99,12 +105,13 @@ namespace xmatch
 			try
 			{
 				options.add_options()
-					("out,o", po::value(&ofile)->implicit_value("out"), "pathname prefix for output(s)")
+					("outdir,o", po::value(&ofile)->implicit_value("out"), "output directory path")
+					("maxout,m", po::value<uint32_t>(&maxout)->default_value(0), "Maximum output per job, default to (jobsize)^2")
 					("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
 					("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
 					("threads,t", po::value<uint32_t>(&num_threads)->default_value(0), "number of threads, defaults to # of GPUs")
-					("nobject,n", po::value<uint32_t>(&num_obj)->default_value(0), "number of objects per segment, defaults to ???")
-					("verbose,v", po::value<uint32_t>()->implicit_value(3), "enable verbosity (implicit level 3=PROGRESS)")
+					("numobj,n", po::value<uint32_t>(&num_obj), "number of objects per segment")
+					("verbose,v", po::value<uint32_t>()->implicit_value(9), "enable verbosity (implicit level 9=ALL)")
 					("help,h", "print help message")
 				;
 				// hidden 
@@ -159,6 +166,13 @@ namespace xmatch
 				return;
 			}
 			outpath = ofile;
+			// Check whether the output dir is writable and can be created
+			if(!boost::filesystem::is_directory( outpath )){
+				boost::filesystem::create_directory( outpath );
+			} else {
+				LOG_ERR << "Output directory already exists. " << outpath << std::endl;
+				exit(-1);
+			}
 		}
 		
 		void MakeLog(std::ostream& out, LogLevel level) 
@@ -280,14 +294,16 @@ namespace xmatch
 				boost::thread_group workers;	
 				for (uint32_t it=0; it<pmt.num_threads; it++) 
 				{
+					
 					std::string outpath("");
 					if (!pmt.outpath.empty())
 					{
 						std::ostringstream oss;	     
-						oss << pmt.outpath.string() << "." << wid++;
+						// *slash* needs testing on windows
+						oss << pmt.outpath.string() << slash << wid++;
 						outpath = oss.str();
 					}
-					Worker w = Worker(cuman, it, jobman, outpath, verbosity);
+					Worker w = Worker(cuman, it, jobman, outpath, pmt.maxout, verbosity);
 					workers.create_thread(w);
 				}
 				workers.join_all();
