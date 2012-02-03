@@ -1,14 +1,19 @@
 
  TODO:
 ------
- - Optimize output to files
+ - Optimize output to files -> optional ascii output
  - obj segment size
  - check defaults
- 	- nobject
- 	- maxout --> defaults to jobA*jobB
+ 	- maxout --> defaults to jobA*jobB  
  - add conditional for timing
- - directories for output
-
+ 
+ - large catalog * 2 >> (max of jA and jB * 10<param?>)
+ - look into zone size for allocation
+ - perhaps presorting
+ - figure out segment size based on memory
+ 
+ - push code over again
+ - recompile on nodes!
 
 Notes:
 ------

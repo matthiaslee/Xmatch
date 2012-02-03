@@ -202,7 +202,7 @@ namespace xmatch
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  {  LOG_ERR << exc.what() << std::endl;	}  
+		catch (std::exception& exc)  {  LOG_ERR <<  "Unknown error! exc.what= " << exc.what() << std::endl;	}  
 		catch (...)  {  LOG_ERR << "Unknown error!" << std::endl;	}  
 	} // operator()
 

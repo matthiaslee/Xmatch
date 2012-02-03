@@ -233,8 +233,9 @@ namespace xmatch
 
 		LOG_DBG << "# of objects for memory  : " << pmt.fileA.size / sizeof(Obj) << std::endl;
 		LOG_DBG << "# of objects for looping : " << pmt.fileB.size / sizeof(Obj) << std::endl;		
+		
 		//Blacklist Display GPU
-		cuman->BlacklistDevice(1);
+		//cuman->BlacklistDevice(1);
 		
 		// warn if B is smaller
 		if (pmt.fileB.size < pmt.fileA.size) 
