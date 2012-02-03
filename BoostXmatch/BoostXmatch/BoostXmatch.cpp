@@ -112,6 +112,7 @@ namespace xmatch
 					("threads,t", po::value<uint32_t>(&num_threads)->default_value(0), "number of threads, defaults to # of GPUs")
 					("numobj,n", po::value<uint32_t>(&num_obj), "number of objects per segment")
 					("verbose,v", po::value<uint32_t>()->implicit_value(9), "enable verbosity (implicit level 9=ALL)")
+					("overwrite,x", "overwrite output directory")
 					("help,h", "print help message")
 				;
 				// hidden 
@@ -170,8 +171,25 @@ namespace xmatch
 			if(!boost::filesystem::is_directory( outpath )){
 				boost::filesystem::create_directory( outpath );
 			} else {
-				LOG_ERR << "Output directory already exists. " << outpath << std::endl;
-				exit(-1);
+				if(vm.count("overwrite")){
+				  LOG_WRN << "Overwrite option set. Removing old directory." << std::endl;
+				      // delete output directory and create new one
+				      boost::filesystem::remove_all( outpath );
+				      boost::filesystem::create_directory( outpath );
+				} else {
+				      std::string resp;    
+				      std::cout << "Output directory already exists: " << outpath << std::endl << "Would like to overwrite this directory?[yes/no] " << std::endl;
+				      std::cin >> resp;
+				      boost::to_upper(resp);
+				      if( resp == "YES" ){
+					  // delete output directory and create new one
+					  boost::filesystem::remove_all( outpath );
+					  boost::filesystem::create_directory( outpath );
+				      } else {
+					  std::cout << "use option -x to overwrite the current output directory" << std::endl;
+					  exit(-1);
+				      }
+				}
 			}
 		}
 		
@@ -237,7 +255,7 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				LOG_DBG << "- " << *s << " has " << num << std::endl;				
+				LOG_DBG << "- " << *s << " has " << num << std::endl;
 				s->Load(file);
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
@@ -271,10 +289,10 @@ namespace xmatch
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
 				Segment *s = new Segment(sid++, num); 
-				LOG_DBG << "- " << *s << " has " << num << std::endl;				
+				LOG_DBG << "- " << *s << " has " << num << std::endl;
 				s->Load(file);
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
-				len -= num;				
+				len -= num;
 			}
 
 			LOG_PRG << "Sorting segments" << std::endl;
