@@ -141,13 +141,14 @@ namespace xmatch
 	void Sorter::Sort(SegmentPtr seg) 
 	{
 		LOG_TIM << "- GPU-" << id << " " << *seg <<" copying to device" << std::endl;
+		size_t free, total;
+		CUresult res;
+
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
-		thrust::device_vector<int64_t> dId(seg->vObj.size());
-		thrust::device_vector<dbl2> dRadec(seg->vObj.size());
 
 		// copy and sort
 		thrust::copy(seg->vObj.begin(), seg->vObj.end(), dObj.begin());
-		seg->vObj.resize(0);
+
 		LOG_TIM << "- GPU-" << id << " " << *seg <<" sorting by zoneid, ra" << std::endl;
 		thrust::sort(dObj.begin(), dObj.end(), less_zonera(zh_deg));
 
@@ -162,7 +163,11 @@ namespace xmatch
 			thrust::lower_bound(dObj.begin(),dObj.end(), search_begin,search_end, d_zone_begin.begin(), less_zone(zh_deg));
 			thrust::upper_bound(dObj.begin(),dObj.end(), search_begin,search_end, d_zone_end.begin(), less_zone(zh_deg));
 		}
+		thrust::device_vector<int64_t> dId(seg->vObj.size());
 
+		thrust::device_vector<dbl2> dRadec(seg->vObj.size());
+
+		seg->vObj.resize(0); // moved from above
 		LOG_DBG << "- GPU-" << id << " " << *seg <<" splitting" << std::endl;
 		// split
 		thrust::transform(dObj.begin(), dObj.end(), dId.begin(), get_id());
@@ -181,8 +186,8 @@ namespace xmatch
 
 	void Sorter::operator()()
 	{   
-		try  
-		{
+		//try  
+		//{
 			CudaContextPtr ctx(new CudaContext(cuman));
 			if (ctx->GetDeviceID() < 0) 
 			{ 
@@ -198,12 +203,14 @@ namespace xmatch
 				if (seg == NULL) keepProcessing = false;
 				else 			 Sort(seg);
 			}
-		}  
+		//}  
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  {  LOG_ERR <<  "Unknown error! exc.what= " << exc.what() << std::endl;	}  
-		catch (...)  {  LOG_ERR << "Unknown error!" << std::endl;	}  
+/*		catch (std::exception& exc)  {  
+			// LOG_ERR <<  "Unknown error! exc.what= " << exc.what() << std::endl;	
+		}  
+		catch (...)  {  LOG_ERR << "Unknown error!" << std::endl;	}  */
 	} // operator()
 
 } // xmatch

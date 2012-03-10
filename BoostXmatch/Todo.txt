@@ -2,18 +2,8 @@
  TODO:
 ------
  - Optimize output to files -> optional ascii output
- - obj segment size
- - check defaults
- 	- maxout --> defaults to jobA*jobB  
  - add conditional for timing
- 
- - large catalog * 2 >> (max of jA and jB * 10<param?>)
- - look into zone size for allocation
- - perhaps presorting
- - figure out segment size based on memory
- 
- - push code over again
- - recompile on nodes!
+
 
 Notes:
 ------
@@ -22,12 +12,7 @@ To build Boost for x64, do this:
 .\b2 --toolset=msvc-10.0 address-model=64
 
 
-Questions:
-----
-- Should I be throwing a verbose warning if more results are returned then allocated?
-- make Blacklisting and option? hidden feature?
-
-
 Version 2.0 Feature list
 ----
 - Dynamically adjust the job size and therefore memory use to the card we are running on
+

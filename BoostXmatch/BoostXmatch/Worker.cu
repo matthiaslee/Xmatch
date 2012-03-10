@@ -72,6 +72,7 @@ namespace xmatch
 		unsigned int tid =  blockDim.x * threadIdx.y + threadIdx.x;
 		unsigned int i1 = blockIdx.x * blockDim.x + threadIdx.x + i1s;
 		unsigned int i2 = blockIdx.y * blockDim.y + threadIdx.y + i2s;
+		
 
 		// save pairs
 		uint2 idx = make_uint2(i1,i2);
@@ -239,30 +240,67 @@ namespace xmatch
 	void Worker::Match(JobPtr job, std::ofstream& outfile)
 	{
 		LOG_TIM << "- GPU-" << id << " " << *job << " copying to device" << std::endl;
+		/*size_t free, total;
+		CUresult res;
+		res = cuMemGetInfo(&free, &total);
+		if(res != CUDA_SUCCESS){
+		    printf("!!!! cuMemGetInfo failed! (status = %x)", res);
+		}
+
+		printf("GPU Memory Status:\n====================\n");
+		printf("^^^^ Free : %u bytes (%u KB) (%u MB)\n", free, free/1024, free/1024/1024);
+		printf("^^^^ Total: %u bytes (%u KB) (%u MB)\n", total, total/1024, total/1024/1024);
+		printf("^^^^ %f%% free, %f%% used\n", 100.0*free/(double)total, 100.0*(total - free)/(double)total);
+		*/
+		int NoReload=0;
 		// copy to gpu  -- shd look 1st if already there...
 		dbl2* p1_radec=NULL;
 		dbl2* p2_radec=NULL;
-		thrust::device_vector<dbl2> d1_radec(0);
-		thrust::device_vector<dbl2> d2_radec(0);
 		
-		if(oldjob==NULL || oldjob->segA!=job->segA){
-		  d1_radec= job->segA->vRadec;
-		  p1_radec = thrust::raw_pointer_cast(&d1_radec[0]);
-
+		if(NoReload==1){
+		    std::cout<<"HERE>curren>oldjob>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob<<" "<<std::endl;
+		    if(oldjob==0 || oldjob->segA!=job->segA){
+			if(oldjob!=0){
+			    std::cout<<"HERE>before>free>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<std::endl;
+			    cudaFree(oldjob->ptrA);
+			    std::cout<<"HERE>after>free>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<std::endl;
+			    LOG_TIM << "old job segA freed" << std::endl;
+			}  
+			cudaMalloc(&p1_radec, sizeof(dbl2)*job->segA->vRadec.size());
+			cudaMemcpy(p1_radec, &(job->segA->vRadec[0]), job->segA->vRadec.size(), cudaMemcpyHostToDevice);
+			job->ptrA = p1_radec;
+		    } else {
+			LOG_TIM << "not reloading segA" << std::endl;
+			std::cout<<"HERE>before>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<" "<<p1_radec<<std::endl;
+			p1_radec = oldjob->ptrA;
+			std::cout<<"HERE>after>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<" "<<p1_radec<<std::endl;
+		    }
+		    if(oldjob==0 || oldjob->segB!=job->segB ){
+			if(oldjob!=0){
+			    cudaFree(oldjob->ptrB);
+			    LOG_TIM << "old job segB freed" << std::endl;
+			}
+			cudaMalloc(&p2_radec, sizeof(dbl2)*job->segB->vRadec.size());
+			cudaMemcpy(p2_radec, &(job->segB->vRadec[0]), job->segB->vRadec.size(), cudaMemcpyHostToDevice);
+			job->ptrB = p2_radec;
+		    } else {
+			LOG_TIM << "not reloading segB" << std::endl;
+			std::cout<<"HERE>before>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrB<<" "<<p2_radec<<std::endl;
+			p2_radec = oldjob->ptrB;
+			std::cout<<"HERE>after>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrB<<" "<<p2_radec<<std::endl;
+		    }
+		    
+		} else {
+		  
+		  cudaMalloc(&p1_radec, sizeof(dbl2)*job->segA->vRadec.size());
+		  cudaMemcpy(p1_radec, &(job->segA->vRadec[0]), job->segA->vRadec.size(), cudaMemcpyHostToDevice);
+		  
 		  job->ptrA = p1_radec;
-		} else {
-		  LOG_TIM << "not reloading segA" << std::endl;
-		  p1_radec = oldjob->ptrA;
-	
-		}
-		if(oldjob==NULL || oldjob->segB!=job->segB ){
-		  d2_radec = job->segB->vRadec;
-		  p2_radec = thrust::raw_pointer_cast(&d2_radec[0]);
 
+		  cudaMalloc(&p2_radec, sizeof(dbl2)*job->segB->vRadec.size());
+		  cudaMemcpy(p2_radec, &(job->segB->vRadec[0]), job->segB->vRadec.size(), cudaMemcpyHostToDevice);
+		
 		  job->ptrB = p2_radec;
-		} else {
-		  LOG_TIM << "not reloading segB" << std::endl;
-		  p2_radec = oldjob->ptrB;
 		}
 
 		// xmatch alloc limit -- configureable with --maxout <n>
@@ -275,9 +313,11 @@ namespace xmatch
 		
 		thrust::device_vector<uint2> d_match_idx(n_match_alloc);
 		thrust::device_vector<unsigned int> d_match_num(1);
+		d_match_num[0] = 0;
 
-		unsigned int* p_match_num = thrust::raw_pointer_cast(&d_match_num[0]);
 		uint2* p_match_idx = thrust::raw_pointer_cast(&d_match_idx[0]);
+		unsigned int* p_match_num = thrust::raw_pointer_cast(&d_match_num[0]);
+		
 
 		int n_zones = job->segA->vZoneBegin.size();
 		double sr_deg = job->sr_deg;
@@ -296,8 +336,8 @@ namespace xmatch
 		cudaEventCreate(&start_event);
 		cudaEventCreate(&stop_event);
 		cudaEventRecord(start_event, 0);
+		cudaDeviceSynchronize();
 		
-
 		// loop
 		for (int zid1 = 0; zid1 < n_zones; zid1++)
 		{
@@ -327,10 +367,34 @@ namespace xmatch
 				// launch
 				xmatch_kernel <<<dimGrid,dimBlock>>> ( p1_radec, i1s, i1e,  p2_radec, i2s, i2e, 
 					sr_rad, alpha_rad, sr_dist2,  p_match_idx, n_match_alloc, p_match_num);
-				
+				//cudaDeviceSynchronize();
+				cudaError_t err1 = cudaGetLastError();
+				if(err1 != 0){
+				  /*LOG_TIM << "- GPU-" << id << " " << "error: "<<err1<<" "<<cudaGetErrorString(err1)<<"\n";
+				  std::cout << "p1 radec= "<< p1_radec << std::endl;
+				  std::cout << "i1s= "<< i1s << std::endl;
+				  std::cout << "i1e= "<< i1e << std::endl;
+				  std::cout << "zid1= "<< zid1 << std::endl;
+				  std::cout << "n_zones= "<< n_zones << std::endl;
+				  std::cout << "p2 radec= "<< p2_radec << std::endl;
+				  std::cout << "i2s= "<< i2s << std::endl;
+				  std::cout << "i2e= "<< i2e << std::endl;
+				  std::cout << "zid2start= "<< zid2start << std::endl;
+				  std::cout << "zid2end= "<< zid2end << std::endl;
+				  std::cout << "sr_rad= "<< sr_rad << std::endl;
+				  std::cout << "alpha_rad= "<< alpha_rad << std::endl;
+				  std::cout << "sr_dist2= "<< sr_dist2 << std::endl;
+				  std::cout << "p_match_idx= "<< p_match_idx << std::endl;
+				  std::cout << "n_match_alloc= "<< n_match_alloc << std::endl;
+				  std::cout << "p_match_num= "<< p_match_num << std::endl;
+				  exit(1);*/
+				}
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...
+			
+
 		}
+		LOG_TIM << "- GPU-" << id << " " << "syncing.." << std::endl;
 		cudaDeviceSynchronize();
 		
 		// Time Kernel execution
@@ -339,9 +403,10 @@ namespace xmatch
 		float calc_time;
 		cudaEventElapsedTime(&calc_time, start_event, stop_event);
 		LOG_PRG << "Job run-length: " << calc_time << "ms" << std::endl;
-		
 
+		//unsigned int match_num = 0;
 		// fetch number of matches from gpu
+		//cudaMemcpy(&match_num, (unsigned int)*p_match_num[0], sizeof(int), cudaMemcpyDeviceToHost);
 		unsigned int match_num = d_match_num[0];
 		LOG_TIM << "- GPU-" << id << " " << *job << " # " << match_num << std::endl;
 		
@@ -387,14 +452,19 @@ namespace xmatch
 
 			}
 		}
+		if(NoReload!=1){
+		  LOG_PRG << "Freeing p1_radec and p2_radec" << std::endl;
+		  cudaFree(p1_radec);
+		  cudaFree(p2_radec);
+		}
 		LOG_PRG << "- GPU-" << id << " " << *job << " done" << std::endl;
 	}
 
 	void Worker::operator()()
 	{   
 		std::ofstream outfile;
-		try  
-		{
+		//try  
+		//{
 			CudaContextPtr ctx(new CudaContext(cuman));
 
 			if (ctx->GetDeviceID() < 0) 
@@ -425,16 +495,16 @@ namespace xmatch
 							Match(job,outfile);
 							jobman->SetStatus(job,FINISHED);
 							oldjob = job;
-						}				
+						}
 					}  
 				} 
 			} /* endif */
 
-		}
+		//}
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-		catch (std::exception& exc)  
+		/*catch (std::exception& exc)  
 		{  
 			LOG_ERR << "- GPU-" << id << " !! Error !!" << std::endl
 				        << exc.what() << std::endl;	
@@ -442,7 +512,7 @@ namespace xmatch
 		catch (...)  
 		{  
 			LOG_ERR << "- GPU-" << id << " !! Unknown error !!" << std::endl;	
-		}  
+		} */ 
 
 		outfile.close();
 	}
