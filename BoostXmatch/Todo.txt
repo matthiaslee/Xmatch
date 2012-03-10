@@ -15,4 +15,3 @@ To build Boost for x64, do this:
 Version 2.0 Feature list
 ----
 - Dynamically adjust the job size and therefore memory use to the card we are running on
-
