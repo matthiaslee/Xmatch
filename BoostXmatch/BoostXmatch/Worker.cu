@@ -370,7 +370,9 @@ namespace xmatch
 				//cudaDeviceSynchronize();
 				cudaError_t err1 = cudaGetLastError();
 				if(err1 != 0){
-				  /*LOG_TIM << "- GPU-" << id << " " << "error: "<<err1<<" "<<cudaGetErrorString(err1)<<"\n";
+				  LOG_TIM << "- GPU-" << id << " " << "error: "<<err1<<" "<<cudaGetErrorString(err1)<<"\n";
+				  std::cout << "BlockDim "<< dimBlock.x << " "<<dimBlock.y << " "<<dimBlock.z << " "<< std::endl;
+				  std::cout << "GridDim "<< dimGrid.x << " "<<dimGrid.y << " "<<dimGrid.z << " "<< std::endl;
 				  std::cout << "p1 radec= "<< p1_radec << std::endl;
 				  std::cout << "i1s= "<< i1s << std::endl;
 				  std::cout << "i1e= "<< i1e << std::endl;
@@ -387,7 +389,7 @@ namespace xmatch
 				  std::cout << "p_match_idx= "<< p_match_idx << std::endl;
 				  std::cout << "n_match_alloc= "<< n_match_alloc << std::endl;
 				  std::cout << "p_match_num= "<< p_match_num << std::endl;
-				  exit(1);*/
+				  exit(1);
 				}
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...

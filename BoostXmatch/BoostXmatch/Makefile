@@ -8,7 +8,7 @@ RM		=   rm -f
 
 #THRUST_DIR = /home/budavari/thrust-v1.3.0
 
-BOOST_DIR = /home/budavari/boost-trunk
+BOOST_DIR = /home/madmaze/boost_1_48_0
 BOOST_END = 
 BOOST_LIB = \
             -lboost_system${BOOST_END} \
@@ -18,7 +18,7 @@ BOOST_LIB = \
             -lboost_program_options${BOOST_END} \
 
 CCFLAGS =	${INCLUDE} 
-INCLUDE =	-I/usr/site/cuda/include
+INCLUDE =	-I/usr/site/cuda/include -I${BOOST_DIR}
 LDLIBS  =	-L. -l${LIBNAME} \
 			-L${BOOST_DIR}/stage/lib ${BOOST_LIB} -lpthread \
 			-L/usr/site/cuda/lib64 -lcudart -lcuda
