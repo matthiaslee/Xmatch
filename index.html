@@ -1,1 +1,88 @@
-test github page
+<html>
+<head>
+  <title> Xmatch: GPU Enhanced Astronomic Catalog Cross-Matching </title>
+</head>
+<body>
+  <link href="style/default.css" rel="stylesheet" type="text/css" />
+  <style type="text/css">
+  <!--
+  .style1 {font-size: 10px}
+  -->
+  </style>
+  <p class="title">
+    Xmatch: GPU Enhanced Astronomic Catalog Cross-Matching
+  </p>
+  <p>
+    <div class="stitle">- <b><a href="http://www.sdss.jhu.edu/~budavari/tamas/">Tamas Budavari</a> & <a href="http://pha.jhu.edu/~madmaze/">Matthias A Lee</a></b> | Budavari[]jhu.edu & MatthiasLee[]jhu.edu | January 2012 -</div></li>
+  </p>
+
+<br />
+<br />
+<br />
+<table width=1000>
+  <tr><td width=1000>
+  <p><span class="heading">Overview:</span><br />
+  ==================</p>
+  Xmatch is a cross-platform, multi-GPU tool which allows for extremely fast cross-matching between two Astronomic catalogs. It is capable of asyncronously managing multiple GPUs, ideal for workstation and cluster environments.
+
+  <br /><br />
+  </td></tr>
+  <tr><td width=1000>
+  <p><span class="heading">Usage:</span><br />
+  ==================</p>
+<pre>
+  Usage: ./BoostXmatch.x [options] file(s)
+    Options:
+      -o [ --outdir ] [=arg(=out)] output directory path
+      -m [ --maxout ] arg (=0)     Maximum output per job, default to (jobsize)^2
+      -r [ --radius ] arg (=5)     search radius in arcsec, default is 5"
+      -z [ --zoneheight ] arg (=0) zone height in arcsec, defaults to radius
+      -t [ --threads ] arg (=0)    number of threads, defaults to # of GPUs
+      -n [ --numobj ] arg          number of objects per segment
+      -v [ --verbose ] [=arg(=9)]  enable verbosity (implicit level 9=ALL)
+      -x [ --overwrite ]           overwrite output directory
+      -h [ --help ]                print help message
+
+ Example:
+     $> ./BoostXmatch.x -o ~/OUTPUT/out1 -n 300000 ~/DATA/datafile1.idradec ~/DATA/datafile2.bin -v 9 -x
+</pre>
+  <br /><br />
+  </td></tr>
+  <tr><td width=1000>
+  <p><span class="heading">Installing:</span><br />
+  ==================</p>
+  Xmatch has a few underlying requirements, mainly an NVIDIA GPU with compute capabillity 2.0 or higher, which are GPUs based on the "Fermi" architecture or newer. On the software side we need CUDA, Thrust and Boost.
+  <br>
+  to install CUDA please download and install the newest CUDA driver and toolkit from <a href="http://developer.nvidia.com/cuda-downloads">Nvidia's Developer Zone</a> <br>
+
+  <h2>Linux install</h2>
+<pre>
+  $> wget http://developer.download.nvidia.com/compute/cuda/4_0/drivers/devdriver_4.0_linux_64_270.41.19.run
+  $> wget http://www.nvidia.com/object/thankyou.html?url=/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
+  # kill all Xserver and things like Gnome or KDE to make sure that its 
+  $> 
+
+
+  <br /><br />
+  </td></tr>
+  <tr><td width=1000>
+  <p><span class="heading">Source and Binaries:</span><br />
+  ==================</p>
+  
+  </td></tr>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
