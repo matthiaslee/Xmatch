@@ -121,7 +121,10 @@ namespace xmatch
 				  found = (dist2 < sr_dist2 ? 1 : 0);
 			     }
 			  }
+		} else {
+		  return;
 		}
+		
 		s_found[tid] = found;
 
 		// count matches in the block
@@ -240,30 +243,19 @@ namespace xmatch
 	void Worker::Match(JobPtr job, std::ofstream& outfile)
 	{
 		LOG_TIM << "- GPU-" << id << " " << *job << " copying to device" << std::endl;
-		/*size_t free, total;
-		CUresult res;
-		res = cuMemGetInfo(&free, &total);
-		if(res != CUDA_SUCCESS){
-		    printf("!!!! cuMemGetInfo failed! (status = %x)", res);
-		}
-
-		printf("GPU Memory Status:\n====================\n");
-		printf("^^^^ Free : %u bytes (%u KB) (%u MB)\n", free, free/1024, free/1024/1024);
-		printf("^^^^ Total: %u bytes (%u KB) (%u MB)\n", total, total/1024, total/1024/1024);
-		printf("^^^^ %f%% free, %f%% used\n", 100.0*free/(double)total, 100.0*(total - free)/(double)total);
-		*/
-		int NoReload=0;
-		// copy to gpu  -- shd look 1st if already there...
+		
+		// copy to gpu
 		dbl2* p1_radec=NULL;
 		dbl2* p2_radec=NULL;
 		
+		// When NoReload == 1 it will try to minimize memory transfers by not
+		// reloading segments that are already in memory, at the moment this
+		// functionality is broken as reference is somehow lost between iterations
+		int NoReload=0;
 		if(NoReload==1){
-		    std::cout<<"HERE>curren>oldjob>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob<<" "<<std::endl;
 		    if(oldjob==0 || oldjob->segA!=job->segA){
 			if(oldjob!=0){
-			    std::cout<<"HERE>before>free>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<std::endl;
 			    cudaFree(oldjob->ptrA);
-			    std::cout<<"HERE>after>free>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<std::endl;
 			    LOG_TIM << "old job segA freed" << std::endl;
 			}  
 			cudaMalloc(&p1_radec, sizeof(dbl2)*job->segA->vRadec.size());
@@ -271,9 +263,7 @@ namespace xmatch
 			job->ptrA = p1_radec;
 		    } else {
 			LOG_TIM << "not reloading segA" << std::endl;
-			std::cout<<"HERE>before>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<" "<<p1_radec<<std::endl;
 			p1_radec = oldjob->ptrA;
-			std::cout<<"HERE>after>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrA<<" "<<p1_radec<<std::endl;
 		    }
 		    if(oldjob==0 || oldjob->segB!=job->segB ){
 			if(oldjob!=0){
@@ -285,9 +275,7 @@ namespace xmatch
 			job->ptrB = p2_radec;
 		    } else {
 			LOG_TIM << "not reloading segB" << std::endl;
-			std::cout<<"HERE>before>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrB<<" "<<p2_radec<<std::endl;
 			p2_radec = oldjob->ptrB;
-			std::cout<<"HERE>after>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<oldjob->ptrB<<" "<<p2_radec<<std::endl;
 		    }
 		    
 		} else {
@@ -364,13 +352,27 @@ namespace xmatch
 				dim3 dimGrid( (n1+dimBlock.x-1) / dimBlock.x, 
 							  (n2+dimBlock.y-1) / dimBlock.y );
 				
+				size_t free, total;
+				CUresult res;
+				res = cuMemGetInfo(&free, &total);
+				if(res != CUDA_SUCCESS){
+				    LOG_TIM << "- GPU-" << id << "!!!! cuMemGetInfo failed! (status = "<<res<<std::endl;
+				    
+				}
+				
 				// launch
 				xmatch_kernel <<<dimGrid,dimBlock>>> ( p1_radec, i1s, i1e,  p2_radec, i2s, i2e, 
 					sr_rad, alpha_rad, sr_dist2,  p_match_idx, n_match_alloc, p_match_num);
 				//cudaDeviceSynchronize();
 				cudaError_t err1 = cudaGetLastError();
 				if(err1 != 0){
+				  LOG_TIM << "- GPU-" << id << "  Memory Status:\n====================\n";
+				  printf("GPU Memory Status:\n====================\n");
+				  LOG_TIM << "- GPU-" << id << "^^^^ Free : " << free << " bytes (" << free/1024 << " KB) (" << free/1024/1024 << " MB)\n";
+				  LOG_TIM << "- GPU-" << id << "^^^^ Total : " << total << " bytes (" << total/1024 << " KB) (" << total/1024/1024 << " MB)\n";
+				  LOG_TIM << "- GPU-" << id << "^^^^ " << 100.0*free/(double)total << "% free," << 100.0*(total - free)/(double)total << "% used\n";
 				  LOG_TIM << "- GPU-" << id << " " << "error: "<<err1<<" "<<cudaGetErrorString(err1)<<"\n";
+				  
 				  std::cout << "BlockDim "<< dimBlock.x << " "<<dimBlock.y << " "<<dimBlock.z << " "<< std::endl;
 				  std::cout << "GridDim "<< dimGrid.x << " "<<dimGrid.y << " "<<dimGrid.z << " "<< std::endl;
 				  std::cout << "p1 radec= "<< p1_radec << std::endl;
@@ -406,16 +408,13 @@ namespace xmatch
 		cudaEventElapsedTime(&calc_time, start_event, stop_event);
 		LOG_PRG << "Job run-length: " << calc_time << "ms" << std::endl;
 
-		//unsigned int match_num = 0;
-		// fetch number of matches from gpu
-		//cudaMemcpy(&match_num, (unsigned int)*p_match_num[0], sizeof(int), cudaMemcpyDeviceToHost);
 		unsigned int match_num = d_match_num[0];
 		LOG_TIM << "- GPU-" << id << " " << *job << " # " << match_num << std::endl;
 		
 		// copy indices to host
 		thrust::host_vector<uint2> h_match_idx = d_match_idx;
 		
-		// check if all matches fit in mem - hack guard
+		// check if all matches fit in mem
 		if (n_match_alloc < match_num) 
 		{
 			LOG_ERR << "- GPU-" << id << " " << *job << " !! Truncated output !!" << std::endl;

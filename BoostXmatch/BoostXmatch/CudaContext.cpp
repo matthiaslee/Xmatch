@@ -11,7 +11,6 @@ namespace xmatch
 		cuResult = cuInit(0);
 		cuResult = cuDeviceGet(&cuDevice, id);
 		cuResult = cuCtxCreate(&ctx, 0, cuDevice);
-		// cuResult = cuCtxCreate(&ctx,CU_CTX_SCHED_YIELD,id);
 		if( cuResult != CUDA_SUCCESS )
 		{
 			id = -2;

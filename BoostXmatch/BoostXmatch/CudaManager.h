@@ -28,9 +28,6 @@ namespace xmatch
 		void BlacklistDevice(int id);
 		void Release(int id);
 
-		//std::vector<int> CudaManager::Query(const cudaDeviceProp& req);
-		//static void Print(cudaDeviceProp devProp);
-
 		inline int GetDeviceCount() { return nDevices; }
 	};
 

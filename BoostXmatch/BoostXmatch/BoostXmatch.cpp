@@ -4,7 +4,8 @@
  */
 
 /*
-Copyright (c) 2011 Tamas Budavari <budavari.at.deleteme.jhu.edu>
+Copyright (c) 2012 Tamas Budavari <budavari.at.deleteme.jhu.edu>
+Copyright (c) 2012 Matthias Lee <MatthiasLee.at.deleteme.jhu.edu>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -186,8 +186,8 @@ namespace xmatch
 
 	void Sorter::operator()()
 	{   
-		//try  
-		//{
+		try  
+		{
 			CudaContextPtr ctx(new CudaContext(cuman));
 			if (ctx->GetDeviceID() < 0) 
 			{ 
@@ -203,14 +203,14 @@ namespace xmatch
 				if (seg == NULL) keepProcessing = false;
 				else 			 Sort(seg);
 			}
-		//}  
+		}  
 		// Catch specific exceptions first 
 		// ...
 		// Catch general so it doesn't go unnoticed
-/*		catch (std::exception& exc)  {  
-			// LOG_ERR <<  "Unknown error! exc.what= " << exc.what() << std::endl;	
+		catch (std::exception& exc)  {  
+			 LOG_ERR <<  "Unknown error! in sorter exc.what= " << exc.what() << std::endl;	
 		}  
-		catch (...)  {  LOG_ERR << "Unknown error!" << std::endl;	}  */
+		catch (...)  {  LOG_ERR << "Unknown error! in sorter " << std::endl;	}  
 	} // operator()
 
 } // xmatch

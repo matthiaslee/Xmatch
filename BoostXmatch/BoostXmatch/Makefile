@@ -1,13 +1,10 @@
-# export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/home/budavari/boost-trunk/stage/lib
-
 NVCC	=	nvcc -m 64 -gencode=arch=compute_20,code=\"sm_20,compute_20\"
 CCXX	= 	g++ -O6
 LD		= 	g++
 AR		= 	ar
 RM		=   rm -f
 
-#THRUST_DIR = /home/budavari/thrust-v1.3.0
-
+# ----------- Path to boost
 BOOST_DIR = /home/madmaze/boost_1_48_0
 BOOST_END = 
 BOOST_LIB = \
@@ -18,10 +15,10 @@ BOOST_LIB = \
             -lboost_program_options${BOOST_END} \
 
 CCFLAGS =	${INCLUDE} 
-INCLUDE =	-I/usr/site/cuda/include -I${BOOST_DIR}
+INCLUDE =	-I/opt/cuda/include -I${BOOST_DIR}
 LDLIBS  =	-L. -l${LIBNAME} \
 			-L${BOOST_DIR}/stage/lib ${BOOST_LIB} -lpthread \
-			-L/usr/site/cuda/lib64 -lcudart -lcuda
+			-L/opt/cuda/lib64 -lcudart -lcuda
 
 ARFLAGS = 	-rcs
 
