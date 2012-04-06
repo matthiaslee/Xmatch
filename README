@@ -1,4 +1,4 @@
-XMatch v0.1
+XMatch v0.2
 
 A GPU accelerated astronomic catalog crossmatching tool.
 
@@ -14,15 +14,16 @@ Changelog
 
 0.1
 - Initial posting
-
+0.2
+- Prooven working with segement size of 50million across 4 GPUs(Tesla c2070)
 
 
 
 License:
 
-Copyright (c) 2011 Tamas Budavari, budavari[]jhu.edu
-Copyright (c) 2011 Matthias Lee, MatthiasLee[]jhu.edu
-Last edited: March 10th 2012
+Copyright (c) 2012 Tamas Budavari, budavari[]jhu.edu
+Copyright (c) 2012 Matthias Lee, MatthiasLee[]jhu.edu
+Last edited: April 6th 2012
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
