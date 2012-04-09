@@ -4,8 +4,19 @@ LD		= 	g++
 AR		= 	ar
 RM		=   rm -f
 
-# ----------- Path to boost
-BOOST_DIR = /home/madmaze/boost_1_48_0
+# ----------- 
+# either export these variables 
+#
+#export BOOST_DIR=/path/to/boost
+#export CUDA_INCLUDE=/opt/cuda/include
+#export CUDA_LIB=/opt/cuda/lib64 
+#
+# or set them here
+#
+#CUDA_INCLUDE=
+#CUDA_LIB=
+#BOOST_DIR=
+
 BOOST_END = 
 BOOST_LIB = \
             -lboost_system${BOOST_END} \
@@ -15,10 +26,10 @@ BOOST_LIB = \
             -lboost_program_options${BOOST_END} \
 
 CCFLAGS =	${INCLUDE} 
-INCLUDE =	-I/opt/cuda/include -I${BOOST_DIR}
+INCLUDE =	-I${CUDA_INCLUDE} -I${BOOST_DIR}
 LDLIBS  =	-L. -l${LIBNAME} \
 			-L${BOOST_DIR}/stage/lib ${BOOST_LIB} -lpthread \
-			-L/opt/cuda/lib64 -lcudart -lcuda
+			-L${CUDA_LIB} -lcudart -lcuda
 
 ARFLAGS = 	-rcs
 
