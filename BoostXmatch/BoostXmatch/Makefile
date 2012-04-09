@@ -15,7 +15,7 @@ RM		=   rm -f
 #
 #CUDA_INCLUDE=
 #CUDA_LIB=
-#BOOST_DIR=
+#BOOST_DIR=/usr/local
 
 BOOST_END = 
 BOOST_LIB = \
