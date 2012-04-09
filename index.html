@@ -13,7 +13,7 @@
     Xmatch: GPU Enhanced Astronomic Catalog Cross-Matching
   </p>
   <p>
-    <div class="stitle">- <b><a href="http://www.sdss.jhu.edu/~budavari/tamas/">Tamas Budavari</a> & <a href="http://pha.jhu.edu/~madmaze/">Matthias A Lee</a></b> | Budavari[]jhu.edu & MatthiasLee[]jhu.edu | January 2012 -</div></li>
+    <div class="stitle">- <b><a href="http://www.sdss.jhu.edu/~budavari/tamas/">Tamas Budavari</a> & <a href="http://pha.jhu.edu/~madmaze/">Matthias A Lee</a></b> | Budavari[]jhu.edu & MatthiasLee[]jhu.edu | April 2012 -</div></li>
   </p>
 <!--<h3><font color="red"><i>currently under construction...</i></font></h3><br>-->
 
@@ -50,46 +50,59 @@
   <br /><br />
   </td></tr>
   <tr><td width=1000>
-  <p><span class="heading">Installing:</span><br />
-  ==================</p>
-  Xmatch has a few underlying requirements, mainly an NVIDIA GPU with compute capabillity 2.0 or higher, which are GPUs based on the "Fermi" architecture or newer. On the software side we need CUDA, Thrust and Boost.
-  <br>
-  to install CUDA please download and install the newest CUDA driver and toolkit from <a href="http://developer.nvidia.com/cuda-downloads">Nvidia's Developer Zone</a> <br>
-
-  <h2>Linux compile and usage</h2>
-<pre>
-  # check out latest code
-  $> git clone git://github.com/matthiaslee/Xmatch.git
-  $> cd Xmatch/BoostXmatch/BoostXmatch
-  $> make
-</pre>
-
-<pre>
-<br />
-  </td></tr>
-  <tr><td width=1000>
   <p><span class="heading">Source and Binaries:</span><br />
   ==================</p>
 <pre>
   using git:
   $> git clone git://github.com/matthiaslee/Xmatch.git
   using bundle:
-  $> wget https://github.com/matthiaslee/Xmatch/raw/master/Bundles/Xmatch-current.tar.gz
+  $> wget https://github.com/matthiaslee/Xmatch/raw/master/Bundles/Xmatch-src-201204091222.tar.gz
+</pre><br />
+  </td></tr>
+  <tr><td width=1000>
+  <p><span class="heading">Installation:</span><br />
+  ==================</p>
+  Xmatch has a few underlying requirements, mainly an NVIDIA GPU with compute capabillity 2.0 or higher, which are GPUs based on the "Fermi" architecture or newer. On the software side we need CUDA, Thrust and Boost.
+  <br>
+  to install CUDA please download and install the newest CUDA driver and toolkit from <a href="http://developer.nvidia.com/cuda-downloads">Nvidia's Developer Zone</a> <br>
+
+  <p><span class="heading">Linux compile and usage:</span><br />
+  ==================</p>
+<pre>
+  # check out latest code
+  $> git clone git://github.com/matthiaslee/Xmatch.git
+  $> cd Xmatch/BoostXmatch/BoostXmatch
 </pre>
+A few variables will need to be exported or set in the make file:
+<pre>
+  $> export BOOST_DIR=/path/to/boost
+  $> export CUDA_INCLUDE=/opt/cuda/include
+  $> export CUDA_LIB=/opt/cuda/lib64
+
+  # or set them at the top of the Makefile
+
+  CUDA_INCLUDE=/path/to/cuda/include
+  CUDA_LIB=/path/to/cuda/lib64
+  BOOST_DIR=/path/to/boost (default install path: /usr/local)
+</pre>
+now we should be all set to compile
+<pre>
+  $> make
+</pre>
+
+  <p><span class="heading">Windows usage:</span><br />
+  ==================</p>
+This started out as a windows project, therefore there are still the VisualStudio files included.<br />
+We have not tested the windows side, but it is on our todo list.
+<br />
+  </td></tr>
+  <tr><td width=1000 height=500>
+<p><span class="heading">Found bug or having trouble?:</span><br />
+  ==================</p>
+If you have found a bug or have feature requests please file them <a href="https://github.com/matthiaslee/Xmatch/issues">here</a><br />
+If you have general question or want to just say hello email us at MatthiasLee[]jhu.edu or Budavari[]jhu.edu
   </td></tr>
 </table>
-
-
-
-
-
-
-
-
-
-
-
-
 
 </body>
 </html>
