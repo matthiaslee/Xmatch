@@ -15,7 +15,7 @@
   <p>
     <div class="stitle">- <b><a href="http://www.sdss.jhu.edu/~budavari/tamas/">Tamas Budavari</a> & <a href="http://pha.jhu.edu/~madmaze/">Matthias A Lee</a></b> | Budavari[]jhu.edu & MatthiasLee[]jhu.edu | January 2012 -</div></li>
   </p>
-<h3><font color="red"><i>currently under construction...</i></font></h3><br>
+<!--<h3><font color="red"><i>currently under construction...</i></font></h3><br>-->
 
 <br />
 <br />
@@ -45,7 +45,7 @@
       -h [ --help ]                print help message
 
  Example:
-     $> ./BoostXmatch.x -o ~/OUTPUT/out1 -n 300000 ~/DATA/datafile1.idradec ~/DATA/datafile2.bin -v 9 -x
+     $> ./BoostXmatch.x -o ~/OUTPUT/out1 -n 50000000 ~/DATA/datafile1.idradec ~/DATA/datafile2.bin -v 9 -x
 </pre>
   <br /><br />
   </td></tr>
@@ -56,20 +56,26 @@
   <br>
   to install CUDA please download and install the newest CUDA driver and toolkit from <a href="http://developer.nvidia.com/cuda-downloads">Nvidia's Developer Zone</a> <br>
 
-  <h2>Linux install</h2>
+  <h2>Linux compile and usage</h2>
 <pre>
-  $> wget http://developer.download.nvidia.com/compute/cuda/4_0/drivers/devdriver_4.0_linux_64_270.41.19.run
-  $> wget http://www.nvidia.com/object/thankyou.html?url=/compute/cuda/4_0/toolkit/cudatoolkit_4.0.17_linux_64_ubuntu10.10.run
-  # kill all Xserver and things like Gnome or KDE to make sure that its 
-  $> 
+  # check out latest code
+  $> git clone git://github.com/matthiaslee/Xmatch.git
+  $> cd Xmatch/BoostXmatch/BoostXmatch
+  $> make
+</pre>
 
-
-  <br /><br />
+<pre>
+<br />
   </td></tr>
   <tr><td width=1000>
   <p><span class="heading">Source and Binaries:</span><br />
   ==================</p>
-  
+<pre>
+  using git:
+  $> git clone git://github.com/matthiaslee/Xmatch.git
+  using bundle:
+  $> wget https://github.com/matthiaslee/Xmatch/raw/master/Bundles/Xmatch-current.tar.gz
+</pre>
   </td></tr>
 </table>
 
