@@ -180,7 +180,7 @@ namespace xmatch
 		seg->vZoneBegin = d_zone_begin;
 		seg->vZoneEnd = d_zone_end;
 		seg->mZoneHeightDegree = zh_deg;
-
+		dObj.resize(0); // remove
 		LOG_TIM << "- GPU-" << id << " " << *seg <<" done" << std::endl;
 	}
 

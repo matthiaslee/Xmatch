@@ -4,8 +4,8 @@
  */
 
 /*
-Copyright (c) 2012 Tamas Budavari <budavari.at.deleteme.jhu.edu>
-Copyright (c) 2012 Matthias Lee <MatthiasLee.at.deleteme.jhu.edu>
+Copyright (c) 2012-2017 Tamas Budavari <budavari.at.deleteme.jhu.edu>
+Copyright (c) 2012-2017 Matthias Lee <MatthiasLee.at.deleteme.jhu.edu>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ THE SOFTWARE.
 #pragma warning(disable: 4005)      // BOOST_COMPILER macro redefinition
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/date_time.hpp>  
+#include <boost/date_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
@@ -64,7 +64,7 @@ namespace xmatch
 	template<class T>
 	std::ostream& operator<< (std::ostream& os, const std::vector<T>& v)
 	{
-		copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout," ")); 
+		copy(v.begin(), v.end(), std::ostream_iterator<T>(std::cout," "));
 		return os;
 	};
 
@@ -80,8 +80,8 @@ namespace xmatch
 			if (fs::is_regular_file(path))
 				size = fs::file_size(path);
 		}
-			
-		friend std::ostream& operator<< (std::ostream& out, const FileDesc& fd) 
+
+		friend std::ostream& operator<< (std::ostream& out, const FileDesc& fd)
 		{
 			out << fd.path;
 			return out;
@@ -95,7 +95,7 @@ namespace xmatch
 		FileDesc fileA, fileB;
 		fs::path outpath;
 		int error, verbosity;
-		
+
 		//Parameter() : error(0), verbose(0), num_threads(0), num_obj(0), zh_arcsec(0), sr_arcsec(0), fileA(""), fileB(""), outpath("") {}
 		Parameter(int argc, char* argv[]) : error(0), verbosity(0)
 		{
@@ -116,11 +116,11 @@ namespace xmatch
 					("overwrite,x", "overwrite output directory")
 					("help,h", "print help message")
 				;
-				// hidden 
-				po::options_description opt_hidden("Hidden options");        
+				// hidden
+				po::options_description opt_hidden("Hidden options");
 				opt_hidden.add_options()
 					("input", po::value< std::vector<std::string> >(&ifiles), "input file")
-				;        
+				;
 				// all options
 				po::options_description opt_cmd("Command options");
 				opt_cmd.add(options).add(opt_hidden);
@@ -140,10 +140,9 @@ namespace xmatch
 				error = 1;
 				return;
 			}
-			if (vm.count("help")) 
+			if (vm.count("help"))
 			{
 				std::cout << "Usage: " << argv[0] << " [options] file(s)" << std::endl << options;
-				std::cout << "Subversion: $Rev$" << std::endl ;
 				error = 1;
 				return;
 			}
@@ -178,7 +177,7 @@ namespace xmatch
 				      boost::filesystem::remove_all( outpath );
 				      boost::filesystem::create_directory( outpath );
 				} else {
-				      std::string resp;    
+				      std::string resp;
 				      std::cout << "Output directory already exists: " << outpath << std::endl << "Would like to overwrite this directory?[yes/no] " << std::endl;
 				      std::cin >> resp;
 				      boost::to_upper(resp);
@@ -193,24 +192,24 @@ namespace xmatch
 				}
 			}
 		}
-		
-		void MakeLog(std::ostream& out, LogLevel level) 
+
+		void MakeLog(std::ostream& out, LogLevel level)
 		{
 			if (level > verbosity) return;
 			Log(out).Get(level) << "Input file A   :  " << fileA << std::endl;
 			Log(out).Get(level) << "Input file B   :  " << fileB << std::endl;
 			Log(out).Get(level) << "Output file    :  " << outpath << std::endl;
-			Log(out).Get(level) << "Search radius  :  " << sr_arcsec << std::endl;                
-			Log(out).Get(level) << "Zone height    :  " << zh_arcsec << std::endl;                
+			Log(out).Get(level) << "Search radius  :  " << sr_arcsec << std::endl;
+			Log(out).Get(level) << "Zone height    :  " << zh_arcsec << std::endl;
 			Log(out).Get(level) << "Verbosity      :  " << verbosity << std::endl;
-			Log(out).Get(level) << "# of threads   :  " << num_threads << std::endl;                
-			Log(out).Get(level) << "# of obj/seg   :  " << num_obj << std::endl;                
+			Log(out).Get(level) << "# of threads   :  " << num_threads << std::endl;
+			Log(out).Get(level) << "# of obj/seg   :  " << num_obj << std::endl;
 		}
 	};
 
 	/*
 	Outline:
-		1) Main thread: Load all segments from smaller file 
+		1) Main thread: Load all segments from smaller file
 		2) Pre-process: Sort all segments and save in host mem
 		3) Main thread: Load enough segments for GPUs from the larger file
 		4) Pre-process: Sort them
@@ -224,7 +223,7 @@ namespace xmatch
 
 		// cuda query
 		CudaManagerPtr cuman(new CudaManager());
-		if (pmt.num_threads<1) 
+		if (pmt.num_threads<1)
 			pmt.num_threads = cuman->GetDeviceCount();
 
 		pmt.MakeLog(std::cout, INFO);
@@ -233,13 +232,13 @@ namespace xmatch
 		LOG_DBG << "# of GPUs: " << cuman->GetDeviceCount() << std::endl;
 
 		LOG_DBG << "# of objects for memory  : " << pmt.fileA.size / sizeof(Obj) << std::endl;
-		LOG_DBG << "# of objects for looping : " << pmt.fileB.size / sizeof(Obj) << std::endl;		
-		
+		LOG_DBG << "# of objects for looping : " << pmt.fileB.size / sizeof(Obj) << std::endl;
+
 		//Blacklist Display GPU
 		//cuman->BlacklistDevice(1);
-		
+
 		// warn if B is smaller
-		if (pmt.fileB.size < pmt.fileA.size) 
+		if (pmt.fileB.size < pmt.fileA.size)
 			LOG_WRN << "!! Larger file in memory?!" << std::endl;
 
 		//
@@ -256,25 +255,25 @@ namespace xmatch
 			while (len > 0)
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
-				Segment *s = new Segment(sid++, num); 
+				Segment *s = new Segment(sid++, num);
 				LOG_DBG << "- " << *s << " has " << num << std::endl;
 				s->Load(file);
 				segmentsRam.push_back(SegmentPtr(s));
 				len -= num;
-			}	
+			}
 
 			LOG_PRG << "Sorting segments" << std::endl;
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsRam));
-				boost::thread_group sorters;	
-				for (uint32_t it=0; it<pmt.num_threads; it++) 
+				boost::thread_group sorters;
+				for (uint32_t it=0; it<pmt.num_threads; it++)
 					sorters.create_thread(Sorter(cuman, it, segman, pmt.sr_arcsec/3600, pmt.zh_arcsec/3600, verbosity));
 				sorters.join_all();
 			}
 		}
 
-		// 
+		//
 		// loop on larger file
 		//
 		LOG_PRG << "Looping on file " << pmt.fileB.path << std::endl;
@@ -290,7 +289,7 @@ namespace xmatch
 			for (uint64_t i=0; i<pmt.num_threads; i++)
 			{
 				uint64_t num = (len > pmt.num_obj) ? pmt.num_obj : len;
-				Segment *s = new Segment(sid++, num); 
+				Segment *s = new Segment(sid++, num);
 				LOG_DBG << "- " << *s << " has " << num << std::endl;
 				s->Load(file);
 				if (num > 0) segmentsFile.push_back(SegmentPtr(s));
@@ -301,8 +300,8 @@ namespace xmatch
 			// sort segments
 			{
 				SegmentManagerPtr segman(new SegmentManager(segmentsFile));
-				boost::thread_group sorters;	
-				for (uint32_t it=0; it<pmt.num_threads; it++) 
+				boost::thread_group sorters;
+				for (uint32_t it=0; it<pmt.num_threads; it++)
 					sorters.create_thread(Sorter(cuman, it, segman, pmt.sr_arcsec/3600, pmt.zh_arcsec/3600, verbosity));
 				sorters.join_all();
 			}
@@ -311,14 +310,14 @@ namespace xmatch
 			// process jobs
 			{
 				JobManagerPtr jobman(new JobManager(segmentsRam,segmentsFile,pmt.sr_arcsec/3600));
-				boost::thread_group workers;	
-				for (uint32_t it=0; it<pmt.num_threads; it++) 
+				boost::thread_group workers;
+				for (uint32_t it=0; it<pmt.num_threads; it++)
 				{
-					
+
 					std::string outpath("");
 					if (!pmt.outpath.empty())
 					{
-						std::ostringstream oss;	     
+						std::ostringstream oss;
 						// *slash* needs testing on windows
 						oss << pmt.outpath.string() << slash << wid++;
 						outpath = oss.str();

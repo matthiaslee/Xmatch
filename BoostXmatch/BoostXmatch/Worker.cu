@@ -335,8 +335,6 @@ namespace xmatch
 
 			if (n1 < 1) continue;
 
-			double alpha_rad = calc_alpha(sr_deg, zh_deg, zid1); // in radians
-
 			int zid2start = std::max(0,zid1-nz);
 			int zid2end = std::min(n_zones-1,zid1+nz);
 
@@ -347,52 +345,20 @@ namespace xmatch
 				int n2 = i2e - i2s;
 
 				if (n2 < 1) continue;
-				
+
+				double alpha_rad = calc_alpha(sr_deg, zh_deg, zid1); // in radians
+
 				dim3 dimBlock(16, THREADS_PER_BLOCK / 16);
 				dim3 dimGrid( (n1+dimBlock.x-1) / dimBlock.x, 
 							  (n2+dimBlock.y-1) / dimBlock.y );
 				
 				size_t free, total;
-				CUresult res;
-				res = cuMemGetInfo(&free, &total);
-				if(res != CUDA_SUCCESS){
-				    LOG_TIM << "- GPU-" << id << "!!!! cuMemGetInfo failed! (status = "<<res<<std::endl;
-				    
-				}
-				
+
 				// launch
 				xmatch_kernel <<<dimGrid,dimBlock>>> ( p1_radec, i1s, i1e,  p2_radec, i2s, i2e, 
 					sr_rad, alpha_rad, sr_dist2,  p_match_idx, n_match_alloc, p_match_num);
 				//cudaDeviceSynchronize();
-				cudaError_t err1 = cudaGetLastError();
-				if(err1 != 0){
-				  LOG_TIM << "- GPU-" << id << "  Memory Status:\n====================\n";
-				  printf("GPU Memory Status:\n====================\n");
-				  LOG_TIM << "- GPU-" << id << "^^^^ Free : " << free << " bytes (" << free/1024 << " KB) (" << free/1024/1024 << " MB)\n";
-				  LOG_TIM << "- GPU-" << id << "^^^^ Total : " << total << " bytes (" << total/1024 << " KB) (" << total/1024/1024 << " MB)\n";
-				  LOG_TIM << "- GPU-" << id << "^^^^ " << 100.0*free/(double)total << "% free," << 100.0*(total - free)/(double)total << "% used\n";
-				  LOG_TIM << "- GPU-" << id << " " << "error: "<<err1<<" "<<cudaGetErrorString(err1)<<"\n";
-				  
-				  std::cout << "BlockDim "<< dimBlock.x << " "<<dimBlock.y << " "<<dimBlock.z << " "<< std::endl;
-				  std::cout << "GridDim "<< dimGrid.x << " "<<dimGrid.y << " "<<dimGrid.z << " "<< std::endl;
-				  std::cout << "p1 radec= "<< p1_radec << std::endl;
-				  std::cout << "i1s= "<< i1s << std::endl;
-				  std::cout << "i1e= "<< i1e << std::endl;
-				  std::cout << "zid1= "<< zid1 << std::endl;
-				  std::cout << "n_zones= "<< n_zones << std::endl;
-				  std::cout << "p2 radec= "<< p2_radec << std::endl;
-				  std::cout << "i2s= "<< i2s << std::endl;
-				  std::cout << "i2e= "<< i2e << std::endl;
-				  std::cout << "zid2start= "<< zid2start << std::endl;
-				  std::cout << "zid2end= "<< zid2end << std::endl;
-				  std::cout << "sr_rad= "<< sr_rad << std::endl;
-				  std::cout << "alpha_rad= "<< alpha_rad << std::endl;
-				  std::cout << "sr_dist2= "<< sr_dist2 << std::endl;
-				  std::cout << "p_match_idx= "<< p_match_idx << std::endl;
-				  std::cout << "n_match_alloc= "<< n_match_alloc << std::endl;
-				  std::cout << "p_match_num= "<< p_match_num << std::endl;
-				  exit(1);
-				}
+
 			}
 			// could cuda-sync here and dump (smaller) result sets on the fly...
 			
