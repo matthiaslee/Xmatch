@@ -108,7 +108,7 @@ namespace xmatch
 				options.add_options()
 					("outdir,o", po::value(&ofile)->implicit_value("out"), "output directory path")
 					("maxout,m", po::value<uint32_t>(&maxout)->default_value(0), "Maximum output per job, default to (jobsize)^2")
-					("radius,r", po::value<double>(&sr_arcsec)->default_value(5), "search radius in arcsec, default is 5\"")
+					("radius,r", po::value<double>(&sr_arcsec)->default_value(1.5), "search radius in arcsec, default is 1.5\"")
 					("zoneheight,z", po::value<double>(&zh_arcsec)->default_value(0), "zone height in arcsec, defaults to radius")
 					("threads,t", po::value<uint32_t>(&num_threads)->default_value(0), "number of threads, defaults to # of GPUs")
 					("numobj,n", po::value<uint32_t>(&num_obj), "number of objects per segment")
@@ -335,9 +335,11 @@ namespace xmatch
 } // namespace xmatch
 
 
-// entry point
-int main(int argc, char* argv[])
-{
-	return xmatch::_main(argc, argv);
+// entry point, extern C to allow python calling
+extern "C" {
+	// entry point
+	int main(int argc, char* argv[])
+	{
+		return xmatch::_main(argc, argv);
+	}
 }
-

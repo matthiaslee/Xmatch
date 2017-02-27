@@ -1,6 +1,6 @@
-NVCC	=	nvcc -m 64 -gencode=arch=compute_20,code=\"sm_20,compute_20\"
-CCXX	= 	g++ -O6
-LD		= 	g++
+NVCC	=	nvcc -m 64 -gencode=arch=compute_20,code=\"sm_20,compute_20\" -Xcompiler -fPIC
+CCXX	= 	g++ -O6 -fPIC
+LD		= 	g++ -fPIC
 AR		= 	ar
 RM		=   rm -f
 
@@ -51,14 +51,17 @@ LINKLIB = 	lib${LIBNAME}.a
 
 # --- Targets ---
 
-all: BoostXmatch.x
+all: Xmatch
 lib: ${LINKLIB}
 
-BoostXmatch.x: BoostXmatch.o lib
+Xmatch: BoostXmatch.o lib libXmatch
 	${LD} -o $@ $< ${OBJS} ${LDLIBS}
 
 ${LINKLIB} : ${LIBOBJS}
 	${AR} ${ARFLAGS} $@ $?
+
+libXmatch:
+	${LD} -shared *.o lib*.a ${LDLIBS} -o libXmatch.so
 
 clean :
 	- ${RM} *.x *.o lib*.a
