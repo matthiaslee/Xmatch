@@ -141,8 +141,6 @@ namespace xmatch
 	void Sorter::Sort(SegmentPtr seg) 
 	{
 		LOG_TIM << "- GPU-" << id << " " << *seg <<" copying to device" << std::endl;
-		size_t free, total;
-		CUresult res;
 
 		thrust::device_vector<Obj> dObj(seg->vObj.size());
 

@@ -51,20 +51,20 @@ LINKLIB = 	lib${LIBNAME}.a
 
 # --- Targets ---
 
-all: Xmatch
+all: Xmatch.x libXmatch
 lib: ${LINKLIB}
 
-Xmatch: BoostXmatch.o lib libXmatch
+Xmatch.x: BoostXmatch.o lib
 	${LD} -o $@ $< ${OBJS} ${LDLIBS}
 
 ${LINKLIB} : ${LIBOBJS}
 	${AR} ${ARFLAGS} $@ $?
 
-libXmatch:
+libXmatch: lib
 	${LD} -shared *.o lib*.a ${LDLIBS} -o libXmatch.so
 
 clean :
-	- ${RM} *.x *.o lib*.a
+	- ${RM} *.x *.o lib*.a *.so
 
 
 # --- Suffix Rules ---

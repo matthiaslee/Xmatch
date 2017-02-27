@@ -10,7 +10,9 @@
 
 namespace xmatch
 {
+	__host__ __device__
 	double calc_alpha(double theta, double abs_dec);
+	__host__ __device__
 	double calc_alpha(double theta, double zh_deg, int zone);
 }
 

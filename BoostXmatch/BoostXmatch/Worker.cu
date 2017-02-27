@@ -351,8 +351,6 @@ namespace xmatch
 				dim3 dimBlock(16, THREADS_PER_BLOCK / 16);
 				dim3 dimGrid( (n1+dimBlock.x-1) / dimBlock.x, 
 							  (n2+dimBlock.y-1) / dimBlock.y );
-				
-				size_t free, total;
 
 				// launch
 				xmatch_kernel <<<dimGrid,dimBlock>>> ( p1_radec, i1s, i1e,  p2_radec, i2s, i2e, 
